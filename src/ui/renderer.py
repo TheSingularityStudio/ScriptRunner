@@ -1,6 +1,7 @@
 from typing import Dict, Any, List
+from .ui_interface import UIBackend
 
-class Renderer:
+class ConsoleRenderer(UIBackend):
     def __init__(self, execution_engine):
         self.engine = execution_engine
 

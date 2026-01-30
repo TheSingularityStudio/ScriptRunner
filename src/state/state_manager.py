@@ -1,14 +1,32 @@
-from typing import Dict, Any, Set
+from typing import Dict, Any, Set, Optional
 import json
 import os
+import time
+from pathlib import Path
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class StateManager:
-    def __init__(self):
+    def __init__(self, save_file: Optional[str] = None):
         self.variables: Dict[str, Any] = {}
         self.flags: Set[str] = set()
         self.current_scene: str = ""
-        self.save_file = "game_save.json"
-        self.active_effects: Dict[str, Dict[str, Any]] = {}  # DSL effects
+        self.save_file = save_file or "game_save.json"
+        self.active_effects: Dict[str, Dict[str, Any]] = {}  # DSL 效果
+
+        # 缓存与优化
+        self._cache: Dict[str, Any] = {}
+        self._cache_timestamps: Dict[str, float] = {}
+        self._auto_save_enabled = True
+        self._last_save_time = 0
+        self._save_interval = 300  # 5 分钟
+
+        # 性能追踪
+        self._operation_count = 0
+        self._cache_hits = 0
+        self._cache_misses = 0
 
     def set_variable(self, key: str, value: Any):
         """设置游戏变量。"""

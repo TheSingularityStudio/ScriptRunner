@@ -125,16 +125,16 @@ class ScriptParser:
     def parse_player_command(self, input_text: str) -> Dict[str, Any]:
         """解析玩家输入命令，返回动作字典。"""
         if not self.command_parser_config:
-            # Fallback to simple parsing
+            # 回退到简单解析
             return {'action': 'unknown', 'target': input_text}
 
         verbs = self.command_parser_config.get('verbs', {})
         nouns = self.command_parser_config.get('nouns', {})
 
-        # Simple tokenization
+        # 简单分词
         tokens = input_text.lower().split()
 
-        # Find verb
+        # 寻找动词
         action = None
         for verb, config in verbs.items():
             patterns = config.get('patterns', [])
@@ -148,7 +148,7 @@ class ScriptParser:
         if not action:
             return {'action': 'unknown', 'input': input_text}
 
-        # Extract target (simple implementation)
+        # 提取目标（简单实现）
         target = None
         for token in tokens:
             if token in nouns.get('dynamic_match', {}):
