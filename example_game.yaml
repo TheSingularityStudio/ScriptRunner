@@ -1,0 +1,84 @@
+title: "Simple Adventure"
+start_scene: "start"
+
+scenes:
+  start:
+    text: |
+      你醒来发现自己在一个陌生的森林里。
+      周围是茂密的树木，远处传来鸟儿的叫声。
+      你看到前方有一条小路，还有一个看起来很旧的箱子。
+    choices:
+      - text: "走向小路"
+        next: "path"
+      - text: "检查箱子"
+        next: "chest"
+        condition: "!has_opened_chest"
+
+  path:
+    text: |
+      你沿着小路走了一会儿。
+      小路变得越来越窄，最终消失在灌木丛中。
+      你听到远处有流水的声音。
+    choices:
+      - text: "继续向前"
+        next: "river"
+      - text: "返回原地"
+        next: "start"
+
+  chest:
+    text: |
+      你走到箱子旁边，箱子没有上锁。
+      打开箱子，你发现里面有一把钥匙和一张纸条。
+      纸条上写着："钥匙可以打开隐藏的门。"
+    commands:
+      - set: "has_key = true"
+      - add_flag: "has_opened_chest"
+    choices:
+      - text: "拿起钥匙"
+        next: "start"
+      - text: "离开箱子"
+        next: "start"
+
+  river:
+    text: |
+      你来到一条小河边。
+      河水清澈，你看到河对岸有一个洞穴入口。
+      但是河水看起来很深，没有桥。
+    choices:
+      - text: "尝试涉水过河"
+        next: "cave_entrance"
+        condition: "has_key == true"
+      - text: "返回森林"
+        next: "start"
+
+  cave_entrance:
+    text: |
+      你成功涉水过河，来到洞穴入口。
+      洞穴里面漆黑一片，但你有钥匙，也许可以打开什么。
+      突然，你听到里面有动静！
+    choices:
+      - text: "进入洞穴"
+        next: "cave_inside"
+      - text: "离开这里"
+        next: "river"
+
+  cave_inside:
+    text: |
+      你进入洞穴，借着微弱的光线前进。
+      前面有一扇门，门上有一个钥匙孔。
+      你试着用钥匙开门...
+    choices:
+      - text: "开门"
+        next: "treasure_room"
+        condition: "has_key == true"
+      - text: "返回入口"
+        next: "cave_entrance"
+
+  treasure_room:
+    text: |
+      门开了！你进入一个充满宝藏的房间。
+      金币、珠宝、魔法物品应有尽有。
+      恭喜你找到了宝藏！
+
+      游戏结束。
+    choices: []
