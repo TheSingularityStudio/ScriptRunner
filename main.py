@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 文字游戏脚本运行器
-一个简单的基于文本的游戏引擎，用于运行YAML脚本定义的游戏。
+一个简单的基于文本的游戏引擎，用于运行YAML脚本定义的游戏，支持DSL语法。
 """
 
 import sys
@@ -29,6 +29,11 @@ def main():
         # 加载游戏脚本
         print(f"正在加载游戏脚本: {script_file}")
         parser.load_script(script_file)
+
+        # 初始化玩家属性
+        player_data = parser.script_data.get('player', {})
+        for attr, value in player_data.get('attributes', {}).items():
+            state_manager.set_variable(attr, value)
 
         # 获取起始场景
         current_scene_id = parser.get_start_scene()
@@ -69,6 +74,7 @@ def main():
     except KeyboardInterrupt:
         print("\n\n游戏已中断。")
         # 可选：在此保存游戏状态
+        state_manager.save_game()
         sys.exit(0)
     except Exception as e:
         print(f"意外错误: {e}")

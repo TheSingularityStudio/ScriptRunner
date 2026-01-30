@@ -8,6 +8,7 @@ class StateManager:
         self.flags: Set[str] = set()
         self.current_scene: str = ""
         self.save_file = "game_save.json"
+        self.active_effects: Dict[str, Dict[str, Any]] = {}  # DSL effects
 
     def set_variable(self, key: str, value: Any):
         """设置游戏变量。"""
@@ -37,29 +38,57 @@ class StateManager:
         """获取当前场景。"""
         return self.current_scene
 
+    def apply_effect(self, effect_name: str, effect_data: Dict[str, Any]):
+        """应用DSL效果。"""
+        self.active_effects[effect_name] = effect_data
+
+    def remove_effect(self, effect_name: str):
+        """移除DSL效果。"""
+        self.active_effects.pop(effect_name, None)
+
+    def get_active_effects(self) -> Dict[str, Dict[str, Any]]:
+        """获取活跃效果。"""
+        return self.active_effects
+
+    def update_effects(self):
+        """更新效果状态（例如，持续时间）。"""
+        expired = []
+        for effect_name, effect in self.active_effects.items():
+            duration = effect.get('duration', 0)
+            if duration > 0:
+                effect['duration'] -= 1
+                if effect['duration'] <= 0:
+                    expired.append(effect_name)
+
+        for effect_name in expired:
+            self.remove_effect(effect_name)
+
     def save_game(self):
-        """将游戏状态保存到文件。"""
+        """将游戏状态保存到文件，包括DSL效果。"""
         state = {
             'variables': self.variables,
             'flags': list(self.flags),
-            'current_scene': self.current_scene
+            'current_scene': self.current_scene,
+            'active_effects': self.active_effects
         }
         with open(self.save_file, 'w', encoding='utf-8') as f:
             json.dump(state, f, ensure_ascii=False, indent=2)
 
     def load_game(self):
-        """从文件加载游戏状态。"""
+        """从文件加载游戏状态，包括DSL效果。"""
         if os.path.exists(self.save_file):
             with open(self.save_file, 'r', encoding='utf-8') as f:
                 state = json.load(f)
             self.variables = state.get('variables', {})
             self.flags = set(state.get('flags', []))
             self.current_scene = state.get('current_scene', '')
+            self.active_effects = state.get('active_effects', {})
             return True
         return False
 
     def reset(self):
-        """重置游戏状态。"""
+        """重置游戏状态，包括DSL效果。"""
         self.variables.clear()
         self.flags.clear()
         self.current_scene = ""
+        self.active_effects.clear()

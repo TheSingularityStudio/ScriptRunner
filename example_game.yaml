@@ -1,84 +1,140 @@
-title: "Simple Adventure"
-start_scene: "start"
+game: "Elderwood Chronicles"
+world:
+  start: "village_square"
+  time_scale: "1 minute real = 10 minutes game"
 
-scenes:
-  start:
-    text: |
-      你醒来发现自己在一个陌生的森林里。
-      周围是茂密的树木，远处传来鸟儿的叫声。
-      你看到前方有一条小路，还有一个看起来很旧的箱子。
+player:
+  attributes:
+    strength: 10
+    intelligence: 8
+    agility: 12
+  skills:
+    - name: "swordsmanship"
+      base_attribute: "strength"
+    - name: "stealth"
+      base_attribute: "agility"
+
+define_object:
+  goblin:
+    type: "creature"
+    name: "哥布林"
+    aliases: ["绿皮", "小怪物"]
+    states:
+      - name: "health"
+        value: 30
+        min: 0
+        max: 100
+    behaviors:
+      attack:
+        success: "你击中了{target}"
+        failure: "你没能打中{target}"
+    random:
+      health: "20-40"
+
+  ancient_chest:
+    type: "container"
+    name: "古老的箱子"
+    description: "一个布满灰尘的古老箱子，上面刻着奇怪的符号。"
+
+event_system:
+  scheduled_events:
+    - trigger: "time > 1800"
+      action: "spawn_werewolf"
+      chance: 0.3
+
+command_parser:
+  verbs:
+    attack:
+      patterns: ["攻击", "打击", "砍", "杀"]
+      requires: ["target"]
+    examine:
+      patterns: ["检查", "查看", "观察", "调查"]
+      requires: ["object"]
+    use:
+      patterns: ["使用", "运用", "动用"]
+      requires: ["item", "target?"]
+  nouns:
+    dynamic_match:
+      goblin: "哥布林"
+      chest: "箱子"
+
+random_system:
+  tables:
+    forest_encounters:
+      type: "weighted"
+      entries:
+        - value: "nothing"
+          weight: 40
+        - value: "hostile_goblin"
+          weight: 25
+          min_level: 1
+        - value: "friendly_traveler"
+          weight: 15
+          condition: "!player.reputation.evil"
+        - value: "random_item"
+          weight: 20
+          table: "forest_loot"
+
+effects:
+  poisoned:
+    duration: 5
+    tick: "every turn"
+    action: "health -= 5"
+    message: "你感到毒液在体内蔓延..."
+
+locations:
+  village_square:
+    description: |
+      {time_of_day}的村庄广场上{random_villager_count}个村民正在忙碌。
+      {weather_description}
+      你可以看到{visible_buildings}。
+    variables:
+      time_of_day: ["清晨", "正午", "黄昏", "深夜"]
+      weather_description: ["细雨蒙蒙", "雾气弥漫", "月光皎洁"]
+      visible_buildings: ["铁匠铺", "旅馆", "教堂"]
+      random_villager_count: ["2-6"]
+    objects:
+      - ref: "ancient_chest"
+        interactive: true
+    exits:
+      north: "forest_path"
+      east: "abandoned_camp"
+    commands:
+      - roll_table: "forest_encounters"
     choices:
-      - text: "走向小路"
-        next: "path"
-      - text: "检查箱子"
-        next: "chest"
+      - text: "进入森林"
+        next: "forest_path"
+      - text: "检查古老的箱子"
+        next: "chest_opened"
         condition: "!has_opened_chest"
 
-  path:
-    text: |
-      你沿着小路走了一会儿。
-      小路变得越来越窄，最终消失在灌木丛中。
-      你听到远处有流水的声音。
+  forest_path:
+    description: |
+      你走在森林小路上。
+      周围是茂密的树木，远处传来鸟儿的叫声。
+      你看到前方有一个哥布林！
+    objects:
+      - ref: "goblin"
+        count: "1-3"
+        spawn_condition: "!player.stealth"
     choices:
-      - text: "继续向前"
-        next: "river"
-      - text: "返回原地"
-        next: "start"
+      - text: "攻击哥布林"
+        next: "forest_path"
+        commands:
+          - apply_effect: "poisoned"
+      - text: "偷偷溜走"
+        next: "village_square"
+        condition: "agility > 10"
 
-  chest:
-    text: |
-      你走到箱子旁边，箱子没有上锁。
-      打开箱子，你发现里面有一把钥匙和一张纸条。
-      纸条上写着："钥匙可以打开隐藏的门。"
+  chest_opened:
+    description: |
+      你打开了古老的箱子，发现里面有一把生锈的钥匙。
+      钥匙上刻着奇怪的符号。
     commands:
       - set: "has_key = true"
       - add_flag: "has_opened_chest"
     choices:
       - text: "拿起钥匙"
-        next: "start"
+        next: "village_square"
       - text: "离开箱子"
-        next: "start"
-
-  river:
-    text: |
-      你来到一条小河边。
-      河水清澈，你看到河对岸有一个洞穴入口。
-      但是河水看起来很深，没有桥。
-    choices:
-      - text: "尝试涉水过河"
-        next: "cave_entrance"
-        condition: "has_key == true"
-      - text: "返回森林"
-        next: "start"
-
-  cave_entrance:
-    text: |
-      你成功涉水过河，来到洞穴入口。
-      洞穴里面漆黑一片，但你有钥匙，也许可以打开什么。
-      突然，你听到里面有动静！
-    choices:
-      - text: "进入洞穴"
-        next: "cave_inside"
-      - text: "离开这里"
-        next: "river"
-
-  cave_inside:
-    text: |
-      你进入洞穴，借着微弱的光线前进。
-      前面有一扇门，门上有一个钥匙孔。
-      你试着用钥匙开门...
-    choices:
-      - text: "开门"
-        next: "treasure_room"
-        condition: "has_key == true"
-      - text: "返回入口"
-        next: "cave_entrance"
-
-  treasure_room:
-    text: |
-      门开了！你进入一个充满宝藏的房间。
-      金币、珠宝、魔法物品应有尽有。
-      恭喜你找到了宝藏！
-
-      游戏结束。
-    choices: []
+        next: "village_square"
