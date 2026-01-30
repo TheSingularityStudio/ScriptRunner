@@ -22,10 +22,10 @@ logger = get_logger(__name__)
 
 def setup_application():
     """Setup the application with DI container."""
-    # Setup logging
+    # 设置日志
     setup_logging()
 
-    # Register services in DI container
+    # 在 DI 容器中注册服务
     container.register('parser', ScriptParser())
     container.register('state_manager', StateManager())
     container.register('execution_engine', ExecutionEngine(
@@ -33,65 +33,68 @@ def setup_application():
         container.get('state_manager')
     ))
 
-    # Register UI backend
+    # 注册UI后端
     ui_manager.register_backend('console', ConsoleRenderer)
     ui_manager.set_backend('console')
 
-    # Load plugins
+    # 加载插件
     plugin_manager.load_plugins()
 
     logger.info("Application setup completed")
 
 
 def main():
-    if len(sys.argv) != 2:
-        print("用法: python main.py <脚本文件>")
-        print("示例: python main.py example_game.yaml")
+    if len(sys.argv) == 1:
+        script_file = "scripts/example_game.yaml"
+    elif len(sys.argv) == 2:
+        script_file = sys.argv[1]
+    else:
+        print("用法: python main.py [脚本文件]")
+        print("如果不指定脚本文件，将使用默认脚本: scripts/example_game.yaml")
+        print("示例: python main.py scripts/example_game.yaml")
         sys.exit(1)
 
-    script_file = sys.argv[1]
-
     try:
-        # Setup application
+        # 设置应用程序
         setup_application()
 
-        # Get components from DI container
+        # 从 DI 容器获取组件
         parser = container.get('parser')
         state_manager = container.get('state_manager')
         execution_engine = container.get('execution_engine')
         renderer = ui_manager.get_current_backend()(execution_engine)
 
-        # Load game script
+        # 加载游戏脚本
         logger.info(f"Loading game script: {script_file}")
         print(f"正在加载游戏脚本: {script_file}")
         parser.load_script(script_file)
 
-        # Initialize player attributes
+        # 初始化玩家属性
         player_data = parser.script_data.get('player', {})
         for attr, value in player_data.get('attributes', {}).items():
             state_manager.set_variable(attr, value)
 
-        # Get starting scene
+        # 获取起始场景
         current_scene_id = parser.get_start_scene()
         logger.info(f"Game starting from scene: {current_scene_id}")
         print(f"游戏从场景开始: {current_scene_id}")
 
-        # Main game loop
+        # 主游戏循环
         while current_scene_id:
-            # Execute current scene
+            # 执行当前场景
             scene_data = execution_engine.execute_scene(current_scene_id)
 
-            # Render scene
+            # 渲染场景
             renderer.render_scene(scene_data)
 
-            # Get player choice
+            # 获取玩家选择
             choice_index = renderer.get_player_choice()
 
             if choice_index == -1:
-                # No choice made, continue current scene
+                # 未做选择，继续当前场景
                 continue
 
-            # Process choice
+            # 流程选择
             next_scene = execution_engine.process_choice(choice_index)
 
             if next_scene:
@@ -114,7 +117,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Game interrupted by user")
         print("\n\n游戏已中断。")
-        # Optional: save game state here
+        # 可选：在此保存游戏状态
         state_manager.save_game()
         sys.exit(0)
     except Exception as e:
