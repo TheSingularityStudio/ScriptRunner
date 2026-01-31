@@ -139,39 +139,97 @@ class CommandExecutor(ICommandExecutor):
         else:
             self.execute_commands(else_commands)
 
+    def _evaluate_expression(self, expression: str, context: dict) -> Any:
+        """简单表达式评估器。"""
+        # 创建安全的上下文，允许字典以支持点号访问
+        class DotDict(dict):
+            def __getattr__(self, key):
+                return self[key]
+
+        def is_safe_value(v):
+            if isinstance(v, (int, float, bool)):
+                return True
+            elif isinstance(v, dict):
+                return all(isinstance(sub_v, (int, float, bool)) for sub_v in v.values())
+            return False
+
+        safe_context = {}
+        for k, v in context.items():
+            if isinstance(v, dict):
+                safe_context[k] = DotDict(v)
+            elif is_safe_value(v):
+                safe_context[k] = v
+
+        safe_context['random'] = random.randint
+
+        # 评估表达式
+        try:
+            return eval(expression, {"__builtins__": {}}, safe_context)
+        except Exception as e:
+            logger.error(f"Error evaluating expression '{expression}': {e}")
+            return 0
+
     def _execute_attack(self, target: str) -> None:
         """执行攻击命令。"""
+        # 获取玩家属性
+        player_attrs = {}
+        for attr in ['strength', 'agility', 'defense', 'health']:
+            player_attrs[attr] = self.state.get_variable(attr, 0)
+
         # 获取目标对象
         target_obj = self.parser.get_object(target)
         if not target_obj:
             logger.warning(f"Attack target not found: {target}")
             return
 
-        # 找到 health 状态（states 是列表）
-        states = target_obj.get('states', [])
-        health_state = None
-        for state in states:
-            if state.get('name') == 'health':
-                health_state = state
-                break
+        target_attrs = target_obj.get('attributes', {})
+        behaviors = target_obj.get('behaviors', {})
+        attack_behavior = behaviors.get('attack', {})
 
-        if not health_state:
-            logger.warning(f"Target {target} has no health state")
-            return
+        # 计算命中率
+        hit_chance_expr = attack_behavior.get('hit_chance', '0.5')
+        context = {**player_attrs, **target_attrs}
+        # 添加 player. 前缀的变量
+        context.update({f'player.{k}': v for k, v in player_attrs.items()})
+        # 添加 player 和 target 字典以支持点号访问
+        context['player'] = player_attrs
+        context['target'] = target_attrs
+        hit_chance = self._evaluate_expression(hit_chance_expr, context)
 
-        # 获取当前生命值
-        current_health = health_state.get('value', 0)
-        damage = 10  # 固定伤害值，可以根据玩家属性计算
-        new_health = max(0, current_health - damage)
+        if random.random() < hit_chance:
+            # 命中
+            damage_expr = attack_behavior.get('damage', '10')
+            damage = self._evaluate_expression(damage_expr, context)
 
-        # 更新生命值
-        health_state['value'] = new_health
-        logger.info(f"Attacked {target}, dealt {damage} damage. Health: {new_health}")
+            # 应用伤害到目标
+            states = target_obj.get('states', [])
+            for state in states:
+                if state['name'] == 'health':
+                    state['value'] = max(0, state['value'] - damage)
+                    break
 
-        # 如果目标死亡，可以添加更多逻辑
-        if new_health <= 0:
-            logger.info(f"{target} has been defeated!")
-            # 可以触发死亡事件或移除对象
+            # 成功消息
+            success_msg = attack_behavior.get('success', '你击中了{target}，造成{damage}点伤害！')
+            success_msg = success_msg.replace('{target}', target).replace('{damage}', str(damage))
+            print(success_msg)
+            logger.info(success_msg)
+        else:
+            # 失败
+            failure_msg = attack_behavior.get('failure', '你没能打中{target}')
+            failure_msg = failure_msg.replace('{target}', target)
+            print(failure_msg)
+            logger.info(failure_msg)
+
+        # 反击
+        counter_msg = attack_behavior.get('counter', '')
+        if counter_msg:
+            print(counter_msg)
+            logger.info(counter_msg)
+            # 反击伤害，暂时固定为5
+            player_health = self.state.get_variable('health', 100)
+            self.state.set_variable('health', max(0, player_health - 5))
+            print(f"你受到了5点反击伤害！")
+            logger.info("Player took 5 counter damage")
 
     def _execute_search(self, location: str) -> None:
         """执行搜索命令。"""

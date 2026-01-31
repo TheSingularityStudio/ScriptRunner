@@ -76,7 +76,8 @@ class Logger:
                     'filename': log_file,
                     'maxBytes': 10 * 1024 * 1024,  # 10MB
                     'backupCount': 5,
-                    'mode': 'a'
+                    'mode': 'a',
+                    'encoding': 'utf-8'
                 }
             },
             'root': {
