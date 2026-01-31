@@ -23,7 +23,21 @@ class ConsoleRenderer(UIBackend):
             for obj in objects:
                 obj_def = self.engine.parser.get_object(obj.get('ref', ''))
                 if obj_def:
-                    print(f"- {obj_def.get('name', obj['ref'])}")
+                    name = obj_def.get('name', obj['ref'])
+                    # 检查是否是生物并显示生命值
+                    if obj_def.get('type') == 'creature':
+                        states = obj_def.get('states', [])
+                        health_state = next((s for s in states if s.get('name') == 'health'), None)
+                        if health_state:
+                            health = health_state.get('value', 0)
+                            if health > 0:
+                                print(f"- {name} (生命值: {health})")
+                            else:
+                                print(f"- {name} (已死亡)")
+                        else:
+                            print(f"- {name}")
+                    else:
+                        print(f"- {name}")
 
         choices = scene_data.get('choices', [])
         if choices:
