@@ -2,7 +2,7 @@ import os
 import time
 from typing import Dict, Any, List
 from .ui_interface import UIBackend
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Any, Type
 from plugin_interface import PluginInterface
-from logger import get_logger
+from .logger import get_logger
 
 logger = get_logger(__name__)
 

@@ -24,7 +24,9 @@ class Logger:
 
             if config is None:
                 # 使用默认配置，但允许覆盖参数
-                default_log_file = log_file or 'scriptrunner.log'
+                default_log_file = log_file or 'logs/scriptrunner.log'
+                # 确保日志目录存在
+                os.makedirs(os.path.dirname(default_log_file), exist_ok=True)
                 default_propagate = propagate if propagate is not None else True
                 config = cls._get_default_config(default_log_file, default_propagate)
 
@@ -70,13 +72,13 @@ class Logger:
                     'stream': 'ext://sys.stdout'
                 },
                 'file': {
-                    'class': 'logging.handlers.RotatingFileHandler',
+                    'class': 'logging.handlers.TimedRotatingFileHandler',
                     'level': 'DEBUG',
                     'formatter': 'standard',
                     'filename': log_file,
-                    'maxBytes': 10 * 1024 * 1024,  # 10MB
-                    'backupCount': 5,
-                    'mode': 'a',
+                    'when': 'midnight',
+                    'interval': 1,
+                    'backupCount': 30,
                     'encoding': 'utf-8'
                 }
             },

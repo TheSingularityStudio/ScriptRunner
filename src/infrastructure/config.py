@@ -8,7 +8,7 @@ import os
 import threading
 from typing import Dict, Any, Optional
 from pathlib import Path
-from logger import get_logger
+from .logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -31,6 +31,8 @@ class Config:
 
         # 检查多个可能的路径
         possible_paths = [
+            # configs 目录（优先）
+            'configs/config.yaml',
             # 当前工作目录
             'config.yaml',
             # 用户配置目录

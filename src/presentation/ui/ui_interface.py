@@ -5,7 +5,7 @@ ScriptRunner 的 UI 接口。
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
