@@ -5,6 +5,9 @@ ScriptRunner 的 UI 接口。
 
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class UIBackend(ABC):
@@ -13,6 +16,7 @@ class UIBackend(ABC):
     @abstractmethod
     def render_scene(self, scene_data: Dict[str, Any]):
         """渲染场景。"""
+        logger.debug("Rendering scene")
         pass
 
     @abstractmethod

@@ -1,6 +1,9 @@
 import os
 from typing import Dict, Any, List
 from .ui_interface import UIBackend
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
 
 class ConsoleRenderer(UIBackend):
     def __init__(self, execution_engine):
@@ -44,22 +47,28 @@ class ConsoleRenderer(UIBackend):
 
     def get_player_choice(self) -> int:
         """获取玩家的选择输入，支持自然语言。"""
+        logger.debug("Waiting for player input")
         while True:
             try:
                 user_input = input("\n请选择 (输入数字) 或输入命令: ").strip()
                 if not user_input:
+                    logger.debug("No input provided")
                     return -1  # No choice made
 
                 # 检查是否是数字选择
                 if user_input.isdigit():
-                    return int(user_input) - 1  # Convert to 0-based index
+                    choice = int(user_input) - 1  # Convert to 0-based index
+                    logger.debug(f"Player selected choice: {choice}")
+                    return choice
 
                 # 处理自然语言输入
                 result = self.engine.process_player_input(user_input)
                 self.show_message(result['message'])
+                logger.debug(f"Processed natural language input: {user_input}")
                 return -1  # Continue current scene
 
             except ValueError:
+                logger.warning("Invalid input format")
                 print("请输入有效的数字或命令。")
 
     def show_message(self, message: str):

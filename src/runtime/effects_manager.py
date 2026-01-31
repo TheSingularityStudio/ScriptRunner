@@ -37,6 +37,22 @@ class EffectsManager:
         else:
             # 创建新效果实例
             effect_instance = effect_data.copy()
+
+            # 解析持续时间字符串
+            duration = effect_instance.get('duration', 0)
+            if isinstance(duration, str):
+                # 解析字符串持续时间，如 "5 turns"
+                duration_parts = duration.split()
+                if duration_parts:
+                    try:
+                        effect_instance['duration'] = int(duration_parts[0])
+                    except ValueError:
+                        effect_instance['duration'] = 0
+                else:
+                    effect_instance['duration'] = 0
+            elif not isinstance(duration, int):
+                effect_instance['duration'] = 0
+
             effect_instance['start_time'] = time.time()
             effect_instance['target'] = target or 'player'
             self.active_effects[effect_name] = effect_instance

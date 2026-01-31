@@ -33,7 +33,7 @@ container.register('plugin_manager', plugin_manager)
 def main():
     # 设置日志配置
     setup_logging()
-    logger = get_logger('scriptrunner')
+    logger = get_logger('main')
 
     # 验证脚本文件路径
     if len(sys.argv) == 1:

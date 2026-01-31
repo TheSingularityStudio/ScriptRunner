@@ -107,6 +107,8 @@ class CommandExecutor(ICommandExecutor):
                 self.state.set_current_scene(command_value)
             elif command_type == 'if':
                 self._execute_if(command)
+            elif command_type == 'attack':
+                self._execute_attack(command_value)
             else:
                 logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:

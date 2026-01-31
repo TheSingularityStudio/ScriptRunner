@@ -290,7 +290,7 @@ locations:
       - text: "攻击哥布林"
         next: "forest_path"
         commands:
-          - apply_effect: "poisoned"
+          - attack: "goblin"
       - text: "偷偷溜走"
         next: "village_square"
         condition: "agility > 10"
