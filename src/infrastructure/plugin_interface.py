@@ -94,6 +94,15 @@ class EventPlugin(PluginInterface):
         pass
 
 
+class ActionPlugin(PluginInterface):
+    """用于提供便利动作函数的插件。"""
+
+    @abstractmethod
+    def get_actions(self) -> Dict[str, callable]:
+        """返回此插件提供的动作函数。"""
+        pass
+
+
 class StoragePlugin(PluginInterface):
     """用于自定义存储后端的插件。"""
 

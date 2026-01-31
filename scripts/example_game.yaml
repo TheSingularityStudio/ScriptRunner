@@ -62,6 +62,11 @@ define_object:
         success: "你击中了{target}，造成{damage}点伤害！"
         failure: "你没能打中{target}"
         counter: "哥布林反击了你！"
+        counter_damage: 5
+        counter_damage_msg: "你受到了{counter_damage}点反击伤害！"
+        combat_attributes: ["strength", "agility", "defense", "health"]
+        health_attribute: "health"
+        player_health_attribute: "health"
       talk:
         responses:            # 可能的对话响应
           - "滚开，人类！"
@@ -188,16 +193,51 @@ command_parser:
 
 # 命令定义 - 脚本驱动的命令行为
 commands:
-  search:
-    description: "搜索当前区域"
+  set:
+    description: "设置变量"
+    actions:
+      - parse_and_set
+  set_variable:
+    description: "设置变量"
+    actions:
+      - set_variable
+  set_flag:
+    description: "设置标志"
+    actions:
+      - set_flag
+  clear_flag:
+    description: "清除标志"
+    actions:
+      - clear_flag
+  roll_table:
+    description: "滚动随机表"
     actions:
       - roll_table
-    table: "forest_path_search"
+  apply_effect:
+    description: "应用效果"
+    actions:
+      - apply_effect
+  remove_effect:
+    description: "移除效果"
+    actions:
+      - remove_effect
+  goto:
+    description: "跳转到场景"
+    actions:
+      - goto
+  if:
+    description: "条件执行"
+    actions:
+      - if
   attack:
     description: "攻击目标"
     actions:
       - message: "你准备攻击..."
       - attack_target
+  search:
+    description: "搜索当前区域"
+    actions:
+      - search_location
 
 # 互动系统定义复杂的玩家互动
 interaction:

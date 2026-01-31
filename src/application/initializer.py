@@ -112,7 +112,8 @@ class ApplicationInitializer:
         parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
         condition_evaluator = self.container.get('condition_evaluator')
-        return ScriptCommandExecutor(parser, state_manager, condition_evaluator)
+        plugin_manager = self.container.get('plugin_manager')
+        return ScriptCommandExecutor(parser, state_manager, condition_evaluator, plugin_manager)
 
     def _create_scene_executor(self):
         """创建场景执行器的工厂函数。"""
