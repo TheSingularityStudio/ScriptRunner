@@ -41,6 +41,8 @@ class ApplicationInitializer:
 
     def _setup_logging(self):
         """设置日志系统。"""
+        # 从配置系统获取日志设置，但避免循环依赖
+        # 这里使用默认配置，稍后可以通过配置系统覆盖
         setup_logging()
 
     def _register_core_services(self):

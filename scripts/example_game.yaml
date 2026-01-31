@@ -2,12 +2,17 @@ game: "Elderwood Chronicles"
 world:
   start: "village_square"
   time_scale: "1 minute real = 10 minutes game"
+  moon_phase: "new"
 
 player:
   attributes:
     strength: 10
     intelligence: 8
     agility: 12
+    stamina: 20
+    health: 100
+    gold: 50
+    reputation: 0
   skills:
     - name: "swordsmanship"
       base_attribute: "strength"
@@ -60,6 +65,21 @@ define_object:
         success: "你击中了狼人！"
         failure: "狼人躲开了你的攻击。"
 
+  hidden_cache:
+    type: "item"
+    name: "隐藏的宝藏"
+    description: "一个隐藏在树根下的小宝藏。"
+
+  forest_loot:
+    type: "loot_table"
+    entries:
+      - item: "gold_coin"
+        weight: 50
+      - item: "herb"
+        weight: 30
+      - item: "dagger"
+        weight: 20
+
 event_system:
   scheduled_events:
     - trigger: "time > 1800"
@@ -93,11 +113,14 @@ command_parser:
     combine:
       patterns: ["组合", "合成", "制作"]
       requires: ["item_a", "item_b"]
+    search:
+      patterns: ["搜索", "寻找", "查找"]
+      requires: ["location"]
   nouns:
     dynamic_match:
-      - pattern: "(. )的(. )"
+      - pattern: "(.+)的(.+)"
         capture: ["owner", "object"]
-      - pattern: '第(\d )个(. )'
+      - pattern: '第(\d+)个(.+)'
         capture: ["index", "object"]
     pronouns:
       它: "last_target"
@@ -179,6 +202,12 @@ state_machines:
       - from: "dawn"
         to: "day"
         condition: "time > 300 && time < 360"
+      - from: "day"
+        to: "dusk"
+        condition: "time > 360 && time < 420"
+      - from: "dusk"
+        to: "night"
+        condition: "time > 420 && time < 480"
     effects:
       night:
         - "visibility: 0.3"
@@ -191,7 +220,7 @@ effects:
   poisoned:
     duration: "5 turns"
     tick: "every turn"
-    action: "health -= 5"
+    action: "player.health -= 5"
     message: "你感到毒液在体内蔓延..."
   blessed:
     duration: "1 hour"
@@ -230,15 +259,13 @@ locations:
       time_of_day: ["清晨", "正午", "黄昏", "深夜"]
       weather_description: ["细雨蒙蒙", "雾气弥漫", "月光皎洁"]
       visible_buildings: ["铁匠铺", "旅馆", "教堂"]
-      random_villager_count: ["2-6"]
+      random_villager_count: "2-6"
     objects:
       - ref: "ancient_chest"
         interactive: true
     exits:
       north: "forest_path"
       east: "abandoned_camp"
-    commands:
-      - roll_table: "forest_encounters"
     choices:
       - text: "进入森林"
         next: "forest_path"
