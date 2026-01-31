@@ -109,7 +109,7 @@ class CommandExecutor(ICommandExecutor):
 
         # 随机选择条目
         result = random.choice(entries)
-        logger.info(f"Rolled table {table_name}: {result}")
+        logger.debug(f"Rolled table {table_name}: {result}")
 
         # 如果结果有命令，执行它们
         if isinstance(result, dict) and 'commands' in result:
@@ -221,25 +221,25 @@ class CommandExecutor(ICommandExecutor):
             success_msg = attack_behavior.get('success', '你击中了{target}，造成{damage}点伤害！')
             success_msg = success_msg.replace('{target}', target).replace('{damage}', str(damage))
             messages.append(success_msg)
-            logger.info(success_msg)
+            logger.debug(success_msg)
         else:
             # 失败
             failure_msg = attack_behavior.get('failure', '你没能打中{target}')
             failure_msg = failure_msg.replace('{target}', target)
             messages.append(failure_msg)
-            logger.info(failure_msg)
+            logger.debug(failure_msg)
 
         # 反击
         counter_msg = attack_behavior.get('counter', '')
         if counter_msg:
             messages.append(counter_msg)
-            logger.info(counter_msg)
+            logger.debug(counter_msg)
             # 反击伤害，暂时固定为5
             player_health = self.state.get_variable('health', 100)
             self.state.set_variable('health', max(0, player_health - 5))
             counter_damage_msg = "你受到了5点反击伤害！"
             messages.append(counter_damage_msg)
-            logger.info("Player took 5 counter damage")
+            logger.debug("Player took 5 counter damage")
         return messages
 
     def _execute_search(self, location: str) -> List[str]:
