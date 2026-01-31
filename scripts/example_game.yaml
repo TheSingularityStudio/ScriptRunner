@@ -24,39 +24,111 @@ define_object:
         value: 30
         min: 0
         max: 100
+      - name: "hostile"
+        value: true
+        type: "boolean"
     behaviors:
       attack:
         success: "你击中了{target}"
         failure: "你没能打中{target}"
+      talk:
+        responses:
+          - "滚开，人类！"
+          - "这里是我的地盘！"
     random:
       health: "20-40"
+      loot_table: "goblin_loot"
 
   ancient_chest:
     type: "container"
     name: "古老的箱子"
     description: "一个布满灰尘的古老箱子，上面刻着奇怪的符号。"
 
+  werewolf:
+    type: "creature"
+    name: "狼人"
+    states:
+      - name: "health"
+        value: 50
+        min: 0
+        max: 100
+      - name: "transformed"
+        value: false
+        type: "boolean"
+    behaviors:
+      attack:
+        success: "你击中了狼人！"
+        failure: "狼人躲开了你的攻击。"
+
 event_system:
   scheduled_events:
     - trigger: "time > 1800"
       action: "spawn_werewolf"
       chance: 0.3
+  reactive_events:
+    - trigger: "player.action = 'search'"
+      conditions:
+        - "location = 'forest_path'"
+        - "perception_check > 15"
+      actions:
+        - "spawn_object: 'hidden_cache'"
+        - "log: '你在树根下发现了一些东西...'"
+    - trigger: "world.moon_phase = 'full'"
+      actions:
+        - "transform: werewolf.human -> werewolf.beast"
+        - "broadcast: '远处传来狼嚎声...'"
 
 command_parser:
   verbs:
     attack:
       patterns: ["攻击", "打击", "砍", "杀"]
       requires: ["target"]
+      aliases: ["fight", "hit"]
     examine:
       patterns: ["检查", "查看", "观察", "调查"]
       requires: ["object"]
     use:
       patterns: ["使用", "运用", "动用"]
       requires: ["item", "target?"]
+    combine:
+      patterns: ["组合", "合成", "制作"]
+      requires: ["item_a", "item_b"]
   nouns:
     dynamic_match:
-      goblin: "哥布林"
-      chest: "箱子"
+      - pattern: "(. )的(. )"
+        capture: ["owner", "object"]
+      - pattern: '第(\d )个(. )'
+        capture: ["index", "object"]
+    pronouns:
+      它: "last_target"
+      这里: "current_location"
+      那个: "last_mentioned"
+
+interaction:
+  multi_step:
+    craft_potion:
+      steps:
+        1:
+          prompt: "你想要制作什么药水？"
+          options: ["治疗药水", "力量药水", "隐形药水"]
+        2:
+          prompt: "选择主要材料："
+          validate: "item in inventory and item.type = 'herb'"
+        3:
+          prompt: "选择催化剂："
+          validate: "item in inventory and item.alchemical = true"
+      result:
+        success: "你成功制作了{potion_name}！"
+        failure: "混合物发出奇怪的声音然后消失了..."
+  physics:
+    push:
+      base_chance: 0.7
+      modifiers:
+        strength: "0.1 per point above 10"
+        object_weight: "-0.05 per kg"
+    climb:
+      difficulty_class: 15
+      skills: ["athletics", "acrobatics"]
 
 random_system:
   tables:
@@ -74,13 +146,79 @@ random_system:
         - value: "random_item"
           weight: 20
           table: "forest_loot"
+    dynamic_dialog:
+      type: "template"
+      template: "{greeting}，{player_name}。{quest_hint}"
+      variables:
+        greeting: ["你好", "欢迎", "嘿"]
+        quest_hint: ["最近森林不太平", "我听说有个宝藏", "小心那些哥布林"]
+  procedural:
+    dungeon_room:
+      algorithm: "cellular_automata"
+      parameters:
+        size: "10x10"
+        wall_density: 0.45
+        iterations: 4
+    npc_personality:
+      traits:
+        - dimension: "friendliness"
+          range: "-5 to 5"
+        - dimension: "greed"
+          range: "0-10"
+      reactions:
+        - when: "player.action = 'give_gift'"
+          effect: "friendliness += gift.value / 10"
+
+state_machines:
+  day_night_cycle:
+    states: ["dawn", "day", "dusk", "night"]
+    transitions:
+      - from: "night"
+        to: "dawn"
+        condition: "time > 240 && time < 300"
+      - from: "dawn"
+        to: "day"
+        condition: "time > 300 && time < 360"
+    effects:
+      night:
+        - "visibility: 0.3"
+        - "monster_spawn_rate: 2.0"
+      day:
+        - "visibility: 1.0"
+        - "foraging_yield: 1.5"
 
 effects:
   poisoned:
-    duration: 5
+    duration: "5 turns"
     tick: "every turn"
     action: "health -= 5"
     message: "你感到毒液在体内蔓延..."
+  blessed:
+    duration: "1 hour"
+    modifiers:
+      luck: 2
+      damage: "*1.1"
+
+meta:
+  macros:
+    is_combat_ready: >
+      health > 0 and
+      stamina > 10 and
+      not has_status('stunned')
+    can_afford: >
+      player.gold >= item.price and
+      (item.restricted ? player.reputation >= item.min_reputation : true)
+  dynamic_scripts:
+    generate_quest:
+      parameters: ["target", "reward"]
+      template: |
+        quest:
+          objective: "击败{target}"
+          reward: "{reward}"
+          difficulty: calculate_difficulty(target)
+    describe_room:
+      algorithm: "markov_chain"
+      training_data: "room_descriptions.txt"
 
 locations:
   village_square:

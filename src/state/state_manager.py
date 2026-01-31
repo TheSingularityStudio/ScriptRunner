@@ -24,6 +24,10 @@ class StateManager:
         """获取游戏变量。"""
         return self.variables.get(key, default)
 
+    def get_all_variables(self) -> Dict[str, Any]:
+        """获取所有变量。"""
+        return self.variables.copy()
+
     def set_flag(self, flag: str):
         """设置游戏标志。"""
         self.flags.add(flag)

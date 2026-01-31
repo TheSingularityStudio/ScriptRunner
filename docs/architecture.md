@@ -207,15 +207,6 @@ class WebUIRenderer(UIBackend):
 - **Efficient Data Structures**: Optimized for game state operations
 - **Modular Execution**: Reduced coupling improves performance
 
-## Future Enhancements
-
-- Additional UI backends (Web, GUI)
-- Advanced plugin APIs
-- Performance profiling tools
-- Script validation and debugging tools
-- Multi-language support
-- Cloud save functionality
-
 ## Migration Guide
 
 For existing ScriptRunner installations:

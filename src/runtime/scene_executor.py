@@ -35,6 +35,10 @@ class SceneExecutor(ISceneExecutor):
         # 处理具有变量替换和条件过滤的场景
         processed_scene = self._process_scene(scene)
 
+        # 替换文本中的变量
+        if 'text' in processed_scene:
+            processed_scene['text'] = self._replace_variables(processed_scene['text'])
+
         # 确保存在“text”字段（与传统格式兼容）
         if 'description' in processed_scene and 'text' not in processed_scene:
             processed_scene['text'] = self._replace_variables(processed_scene['description'])
@@ -59,24 +63,11 @@ class SceneExecutor(ISceneExecutor):
 
     def _replace_variables(self, text: str) -> str:
         """替换文本中的 DSL 变量。"""
-        variables = self.parser.get_scene(self.state.get_current_scene()).get('variables', {})
+        # Get all variables from state manager
+        variables = self.state.get_all_variables()
 
         for var_name, var_value in variables.items():
-            if isinstance(var_value, list):
-                # 从列表中随机选择
-                import random
-                replacement = random.choice(var_value)
-            elif isinstance(var_value, str) and '-' in var_value:
-                # 随机范围
-                try:
-                    import random
-                    min_val, max_val = map(int, var_value.split('-'))
-                    replacement = str(random.randint(min_val, max_val))
-                except ValueError:
-                    replacement = var_value
-            else:
-                replacement = str(var_value)
-
-            text = text.replace(f"{{{var_name}}}", replacement)
+            if var_value is not None:
+                text = text.replace(f"{{{var_name}}}", str(var_value))
 
         return text

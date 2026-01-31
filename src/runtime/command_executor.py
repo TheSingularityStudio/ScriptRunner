@@ -38,6 +38,8 @@ class CommandExecutor(ICommandExecutor):
         try:
             if command_type == 'set':
                 self._execute_set(command_value)
+            elif command_type == 'set_variable':
+                self._execute_set_variable(command_value)
             elif command_type == 'set_flag':
                 self.state.set_flag(command_value)
             elif command_type == 'clear_flag':
@@ -113,6 +115,14 @@ class CommandExecutor(ICommandExecutor):
 
         self.state.apply_effect(effect_name, effect)
         logger.debug(f"Applied effect: {effect_name}")
+
+    def _execute_set_variable(self, command_value: Dict[str, Any]) -> None:
+        """执行设置变量命令。"""
+        name = command_value.get('name')
+        value = command_value.get('value')
+        if name is not None and value is not None:
+            self.state.set_variable(name, value)
+            logger.debug(f"Set variable {name} = {value}")
 
     def _execute_if(self, command: Dict[str, Any]) -> None:
         """执行条件命令。"""
