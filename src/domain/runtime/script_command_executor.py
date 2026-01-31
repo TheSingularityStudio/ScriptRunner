@@ -1,23 +1,26 @@
 """
-ScriptRunner 的命令执行器。
-处理游戏脚本中的命令执行。
+ScriptRunner 脚本驱动的命令执行器。
+支持在YAML脚本中定义命令行为，而不是硬编码。
 """
 
-from typing import Dict, Any, List
-import random
+from typing import Dict, Any, List, Callable
 from .interfaces import ICommandExecutor
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class CommandExecutor(ICommandExecutor):
-    """执行游戏脚本中的命令。"""
+class ScriptCommandExecutor(ICommandExecutor):
+    """脚本驱动的命令执行器，支持动态注册命令处理器。"""
 
     def __init__(self, parser, state_manager, condition_evaluator):
         self.parser = parser
         self.state = state_manager
         self.condition_evaluator = condition_evaluator
+        self.command_handlers: Dict[str, Callable[[Dict[str, Any]], List[str]]] = {}
+
+        # 注册内置命令处理器
+        self._register_builtin_handlers()
 
     def execute_commands(self, commands: List[Dict[str, Any]]) -> List[str]:
         """执行命令列表并返回所有消息。"""
@@ -39,39 +42,75 @@ class CommandExecutor(ICommandExecutor):
         logger.debug(f"Executing command: {command_type} = {command_value}")
 
         try:
-            if command_type == 'set':
-                self._execute_set(command_value)
-            elif command_type == 'set_variable':
-                self._execute_set_variable(command_value)
-            elif command_type == 'set_flag' or command_type == 'add_flag':
-                self.state.set_flag(command_value)
-            elif command_type == 'clear_flag':
-                self.state.clear_flag(command_value)
-            elif command_type == 'roll_table':
-                messages.extend(self._execute_roll_table(command_value))
-            elif command_type == 'apply_effect':
-                self._execute_apply_effect(command_value)
-            elif command_type == 'remove_effect':
-                self.state.remove_effect(command_value)
-            elif command_type == 'goto':
-                self.state.set_current_scene(command_value)
-            elif command_type == 'if':
-                messages.extend(self._execute_if(command))
-            elif command_type == 'attack':
-                messages.extend(self._execute_attack(command_value))
-            elif command_type == 'search':
-                messages.extend(self._execute_search(command_value))
+            # 首先尝试使用脚本定义的命令
+            script_command = self.parser.get_command(command_type)
+            if script_command:
+                messages.extend(self._execute_script_command(script_command, command_value))
             else:
-                logger.warning(f"Unknown command type: {command_type}")
+                # 回退到注册的处理器
+                handler = self.command_handlers.get(command_type)
+                if handler:
+                    messages.extend(handler(command_value))
+                else:
+                    logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:
             logger.error(f"Error executing command {command}: {e}")
         return messages
 
-    def _execute_set(self, expression: str) -> None:
+    def register_command_handler(self, command_name: str, handler: Callable[[Dict[str, Any]], List[str]]):
+        """注册自定义命令处理器。"""
+        self.command_handlers[command_name] = handler
+        logger.info(f"Registered command handler: {command_name}")
+
+    def _execute_script_command(self, command_def: Dict[str, Any], command_value: Any) -> List[str]:
+        """执行脚本定义的命令。"""
+        messages = []
+
+        # 获取命令的执行逻辑
+        actions = command_def.get('actions', [])
+
+        for action in actions:
+            if isinstance(action, dict):
+                # 执行子命令
+                messages.extend(self.execute_command(action))
+            elif isinstance(action, str):
+                # 执行简单动作
+                if action == 'roll_table':
+                    table_name = command_def.get('table', command_value)
+                    messages.extend(self._execute_roll_table(table_name))
+                elif action == 'set_variable':
+                    var_name = command_def.get('variable', command_value)
+                    var_value = command_def.get('value', command_value)
+                    self._execute_set_variable({var_name: var_value})
+                elif action == 'message':
+                    msg = command_def.get('message', '')
+                    messages.append(msg)
+                else:
+                    logger.warning(f"Unknown script action: {action}")
+
+        return messages
+
+    def _register_builtin_handlers(self):
+        """注册内置命令处理器。"""
+        self.command_handlers.update({
+            'set': self._execute_set,
+            'set_variable': self._execute_set_variable,
+            'set_flag': lambda value: self._execute_set_flag(value),
+            'clear_flag': lambda value: self._execute_clear_flag(value),
+            'roll_table': self._execute_roll_table,
+            'apply_effect': self._execute_apply_effect,
+            'remove_effect': lambda value: self._execute_remove_effect(value),
+            'goto': lambda value: self._execute_goto(value),
+            'if': self._execute_if,
+            'attack': self._execute_attack,
+            'search': self._execute_search,
+        })
+
+    def _execute_set(self, expression: str) -> List[str]:
         """执行设置命令，如 'has_key = true' 或 'health = 100'。"""
         if '=' not in expression:
             logger.warning(f"Invalid set expression: {expression}")
-            return
+            return []
 
         key, value_str = expression.split('=', 1)
         key = key.strip()
@@ -93,6 +132,26 @@ class CommandExecutor(ICommandExecutor):
 
         self.state.set_variable(key, value)
         logger.debug(f"Set variable {key} = {value}")
+        return []
+
+    def _execute_set_variable(self, command_value: Dict[str, Any]) -> List[str]:
+        """执行设置变量命令。"""
+        name = command_value.get('name')
+        value = command_value.get('value')
+        if name is not None and value is not None:
+            self.state.set_variable(name, value)
+            logger.debug(f"Set variable {name} = {value}")
+        return []
+
+    def _execute_set_flag(self, flag_name: str) -> List[str]:
+        """设置标志。"""
+        self.state.set_flag(flag_name)
+        return []
+
+    def _execute_clear_flag(self, flag_name: str) -> List[str]:
+        """清除标志。"""
+        self.state.clear_flag(flag_name)
+        return []
 
     def _execute_roll_table(self, table_name: str) -> List[str]:
         """执行随机表滚动并返回消息。"""
@@ -107,6 +166,7 @@ class CommandExecutor(ICommandExecutor):
             logger.warning(f"Random table {table_name} has no entries")
             return messages
 
+        import random
         # 随机选择条目
         result = random.choice(entries)
         logger.debug(f"Rolled table {table_name}: {result}")
@@ -120,23 +180,26 @@ class CommandExecutor(ICommandExecutor):
             messages.extend(self.execute_commands(result['commands']))
         return messages
 
-    def _execute_apply_effect(self, effect_name: str) -> None:
+    def _execute_apply_effect(self, effect_name: str) -> List[str]:
         """应用效果。"""
         effect = self.parser.get_effect(effect_name)
         if not effect:
             logger.warning(f"Effect not found: {effect_name}")
-            return
+            return []
 
         self.state.apply_effect(effect_name, effect)
         logger.debug(f"Applied effect: {effect_name}")
+        return []
 
-    def _execute_set_variable(self, command_value: Dict[str, Any]) -> None:
-        """执行设置变量命令。"""
-        name = command_value.get('name')
-        value = command_value.get('value')
-        if name is not None and value is not None:
-            self.state.set_variable(name, value)
-            logger.debug(f"Set variable {name} = {value}")
+    def _execute_remove_effect(self, effect_name: str) -> List[str]:
+        """移除效果。"""
+        self.state.remove_effect(effect_name)
+        return []
+
+    def _execute_goto(self, scene_id: str) -> List[str]:
+        """跳转到场景。"""
+        self.state.set_current_scene(scene_id)
+        return []
 
     def _execute_if(self, command: Dict[str, Any]) -> List[str]:
         """执行条件命令并返回消息。"""
@@ -150,64 +213,6 @@ class CommandExecutor(ICommandExecutor):
         else:
             messages.extend(self.execute_commands(else_commands))
         return messages
-
-    def _evaluate_expression(self, expression: str, context: dict) -> Any:
-        """
-        Safely evaluate a mathematical or logical expression with limited context.
-
-        This method provides a restricted evaluation environment to prevent code injection
-        while allowing basic arithmetic, comparisons, and access to game state variables.
-        It supports dot notation for nested dictionary access (e.g., player.health).
-
-        Args:
-            expression: The expression string to evaluate (e.g., "strength * 2 + 5")
-            context: Dictionary containing variable names and their values available in the expression
-
-        Returns:
-            The result of the expression evaluation, or 0 if evaluation fails
-
-        Note:
-            - Only safe built-in types (int, float, bool) and dictionaries are allowed in context
-            - Supports random.randint function for dice rolls
-            - Complex expressions may fail and return 0 with error logging
-        """
-        # Create a safe context that allows dictionary access via dot notation
-        class DotDict(dict):
-            """Dictionary subclass that allows attribute-style access for dot notation."""
-            def __getattr__(self, key):
-                return self[key]
-
-        def is_safe_value(v):
-            """Check if a value is safe to include in the evaluation context."""
-            if isinstance(v, (int, float, bool)):
-                return True
-            elif isinstance(v, dict):
-                # Ensure all nested values are also safe
-                return all(isinstance(sub_v, (int, float, bool)) for sub_v in v.values())
-            return False
-
-        safe_context = {}
-        for k, v in context.items():
-            if isinstance(v, dict):
-                # Wrap dictionaries to support dot notation (e.g., player.health)
-                safe_context[k] = DotDict(v)
-            elif is_safe_value(v):
-                safe_context[k] = v
-
-        # Add random function for dice rolls and similar mechanics
-        safe_context['random'] = random.randint
-
-        # Evaluate the expression in the restricted environment
-        try:
-            return eval(expression, {"__builtins__": {}}, safe_context)
-        except (NameError, TypeError, SyntaxError, ZeroDivisionError) as e:
-            # Log expected evaluation errors (invalid syntax, undefined variables, etc.)
-            logger.error(f"Error evaluating expression '{expression}': {e}")
-            return 0
-        except Exception as e:
-            # Catch any unexpected errors during evaluation
-            logger.error(f"Unexpected error evaluating expression '{expression}': {e}")
-            return 0
 
     def _execute_attack(self, target: str) -> List[str]:
         """执行攻击命令并返回消息。"""
@@ -237,6 +242,7 @@ class CommandExecutor(ICommandExecutor):
         context['target'] = target_attrs
         hit_chance = self._evaluate_expression(hit_chance_expr, context)
 
+        import random
         if random.random() < hit_chance:
             # 命中
             damage_expr = attack_behavior.get('damage', '10')
@@ -288,3 +294,46 @@ class CommandExecutor(ICommandExecutor):
             messages.append(msg)
             logger.info(msg)
         return messages
+
+    def _evaluate_expression(self, expression: str, context: dict) -> Any:
+        """
+        Safely evaluate a mathematical or logical expression with limited context.
+        """
+        # Create a safe context that allows dictionary access via dot notation
+        class DotDict(dict):
+            """Dictionary subclass that allows attribute-style access for dot notation."""
+            def __getattr__(self, key):
+                return self[key]
+
+        def is_safe_value(v):
+            """Check if a value is safe to include in the evaluation context."""
+            if isinstance(v, (int, float, bool)):
+                return True
+            elif isinstance(v, dict):
+                # Ensure all nested values are also safe
+                return all(isinstance(sub_v, (int, float, bool)) for sub_v in v.values())
+            return False
+
+        safe_context = {}
+        for k, v in context.items():
+            if isinstance(v, dict):
+                # Wrap dictionaries to support dot notation (e.g., player.health)
+                safe_context[k] = DotDict(v)
+            elif is_safe_value(v):
+                safe_context[k] = v
+
+        # Add random function for dice rolls and similar mechanics
+        import random
+        safe_context['random'] = random.randint
+
+        # Evaluate the expression in the restricted environment
+        try:
+            return eval(expression, {"__builtins__": {}}, safe_context)
+        except (NameError, TypeError, SyntaxError, ZeroDivisionError) as e:
+            # Log expected evaluation errors (invalid syntax, undefined variables, etc.)
+            logger.error(f"Error evaluating expression '{expression}': {e}")
+            return 0
+        except Exception as e:
+            # Catch any unexpected errors during evaluation
+            logger.error(f"Unexpected error evaluating expression '{expression}': {e}")
+            return 0

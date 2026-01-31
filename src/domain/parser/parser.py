@@ -23,6 +23,7 @@ class ScriptParser(IScriptParser):
         self.random_tables = {}  # DSL random systems
         self.state_machines = {}  # DSL state machines
         self.effects = {}  # DSL effects
+        self.commands = {}  # DSL commands
 
     def load_script(self, file_path: str) -> Dict[str, Any]:
         """加载并解析YAML脚本文件，支持DSL语法。"""
@@ -89,6 +90,9 @@ class ScriptParser(IScriptParser):
             if 'command_parser' in self.script_data:
                 logger.debug("Parsing DSL command parser")
                 self._parse_command_parser()
+            if 'commands' in self.script_data:
+                logger.debug("Parsing DSL commands")
+                self._parse_commands()
             if 'random_system' in self.script_data:
                 logger.debug("Parsing DSL random system")
                 self._parse_random_system()
@@ -132,6 +136,10 @@ class ScriptParser(IScriptParser):
     def _parse_effects(self):
         """解析效果系统。"""
         self.effects = self.script_data['effects']
+
+    def _parse_commands(self):
+        """解析命令定义。"""
+        self.commands = self.script_data['commands']
 
     def get_scene(self, scene_id: str) -> Dict[str, Any]:
         """通过ID获取特定场景，支持DSL和传统格式。"""
@@ -182,6 +190,10 @@ class ScriptParser(IScriptParser):
     def get_effect(self, effect_name: str) -> Dict[str, Any]:
         """获取效果定义。"""
         return self.effects.get(effect_name, {})
+
+    def get_command(self, command_name: str) -> Dict[str, Any]:
+        """获取命令定义。"""
+        return self.commands.get(command_name, {})
 
     def parse_player_command(self, input_text: str) -> Dict[str, Any]:
         """解析玩家输入命令，返回动作字典。"""

@@ -28,6 +28,7 @@ class InputHandler(IInputHandler):
             'attack': self._execute_attack,
             'search': self._execute_search,
             'combine': self._execute_combine,
+            'inventory': self._execute_inventory,
         }
 
     def process_player_input(self, input_text: str) -> Dict[str, Any]:
@@ -202,9 +203,14 @@ class InputHandler(IInputHandler):
             entries = table.get('entries', [])
             if entries:
                 result = random.choice(entries)
+                messages = []
                 if isinstance(result, dict) and 'commands' in result:
-                    self.command_executor.execute_commands(result['commands'])
-                return {'success': True, 'message': f"你仔细搜索了{target or '周围'}，{result.get('message', '发现了什么东西！')}"}
+                    # 执行命令并收集消息
+                    command_messages = self.command_executor.execute_commands(result['commands'])
+                    messages.extend(command_messages)
+                base_message = f"你仔细搜索了{target or '周围'}，{result.get('message', '发现了什么东西！')}"
+                messages.insert(0, base_message)
+                return {'success': True, 'message': '\n'.join(messages)}
 
         # 检查事件系统是否有搜索相关事件
         # 这里可以扩展为触发事件系统中的搜索事件
@@ -244,6 +250,25 @@ class InputHandler(IInputHandler):
 
         # 如果没有匹配的配方
         return {'success': False, 'message': f"你尝试组合 {target}，但没有成功。"}
+
+    def _execute_inventory(self, target: str) -> Dict[str, Any]:
+        """执行查看背包动作。"""
+        inventory = self.state.get_variable('inventory', [])
+        if not inventory:
+            return {'success': True, 'message': "你的背包是空的。"}
+
+        # 获取物品描述
+        item_descriptions = []
+        for item_id in inventory:
+            obj = self.parser.get_object(item_id)
+            if obj:
+                name = obj.get('name', item_id)
+                item_descriptions.append(f"- {name}")
+            else:
+                item_descriptions.append(f"- {item_id}")
+
+        message = "你的背包中有：\n" + "\n".join(item_descriptions)
+        return {'success': True, 'message': message}
 
     def _is_object_accessible(self, obj_id: str) -> bool:
         """检查对象是否在当前场景中可访问。"""
