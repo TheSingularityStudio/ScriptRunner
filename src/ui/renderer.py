@@ -67,3 +67,11 @@ class ConsoleRenderer(UIBackend):
     def clear_screen(self):
         """清除控制台屏幕。"""
         print("\n" * 50)  # Simple screen clear
+
+    def render_status(self, status_data: Dict[str, Any]):
+        """渲染玩家状态信息。"""
+        print("\n" + "-"*30)
+        print("玩家状态:")
+        for key, value in status_data.items():
+            print(f"  {key}: {value}")
+        print("-"*30)

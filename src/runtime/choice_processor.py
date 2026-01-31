@@ -4,12 +4,13 @@ ScriptRunner 的选择处理器。
 """
 
 from typing import Optional, Dict, Any, List
+from .interfaces import IChoiceProcessor
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class ChoiceProcessor:
+class ChoiceProcessor(IChoiceProcessor):
     """处理玩家选择处理和场景导航。"""
 
     def __init__(self, parser, state_manager, command_executor):

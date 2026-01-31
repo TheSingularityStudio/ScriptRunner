@@ -80,3 +80,6 @@ def get_logger(name: str = 'scriptrunner') -> logging.Logger:
 def setup_logging(config: Optional[Dict[str, Any]] = None):
     """设置日志配置。"""
     Logger.setup(config)
+
+
+# 移除全局logger实例，由调用方创建和管理

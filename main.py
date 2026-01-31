@@ -6,41 +6,24 @@
 
 import sys
 import os
-from src.di.container import container
+from src.di.container import Container
 from src.logging.logger import setup_logging, get_logger
-from src.config.config import config
-from src.ui.ui_interface import ui_manager
-from src.plugins.plugin_manager import plugin_manager
+from src.config.config import Config
+from src.ui.ui_interface import UIManager
+from src.plugins.plugin_manager import PluginManager
 from src.utils.exceptions import GameError, ScriptError, ConfigurationError
 from src.parser.parser import ScriptParser
 from src.state.state_manager import StateManager
 from src.runtime.execution_engine import ExecutionEngine
 from src.ui.renderer import ConsoleRenderer
+from src.app.initializer import ApplicationInitializer
 
+# 创建所有依赖实例
+container = Container()
+config = Config()
+ui_manager = UIManager()
+plugin_manager = PluginManager()
 logger = get_logger(__name__)
-
-
-def setup_application():
-    """Setup the application with DI container."""
-    # 设置日志
-    setup_logging()
-
-    # 在 DI 容器中注册服务
-    container.register('parser', ScriptParser())
-    container.register('state_manager', StateManager())
-    container.register('execution_engine', ExecutionEngine(
-        container.get('parser'),
-        container.get('state_manager')
-    ))
-
-    # 注册UI后端
-    ui_manager.register_backend('console', ConsoleRenderer)
-    ui_manager.set_backend('console')
-
-    # 加载插件
-    plugin_manager.load_plugins()
-
-    logger.info("Application setup completed")
 
 
 def main():
@@ -55,8 +38,9 @@ def main():
         sys.exit(1)
 
     try:
-        # 设置应用程序
-        setup_application()
+        # 创建并初始化应用程序
+        initializer = ApplicationInitializer(container, ui_manager, plugin_manager)
+        initializer.initialize()
 
         # 从 DI 容器获取组件
         parser = container.get('parser')

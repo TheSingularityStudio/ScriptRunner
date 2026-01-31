@@ -2,8 +2,9 @@ import yaml
 import os
 from typing import Dict, Any, List, Optional
 import re
+from .interfaces import IScriptParser
 
-class ScriptParser:
+class ScriptParser(IScriptParser):
     def __init__(self):
         self.script_data = {}
         self.objects = {}  # DSL objects

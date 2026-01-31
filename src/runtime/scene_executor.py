@@ -4,12 +4,13 @@ ScriptRunner 的场景执行器。
 """
 
 from typing import Dict, Any, Optional
+from .interfaces import ISceneExecutor
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class SceneExecutor:
+class SceneExecutor(ISceneExecutor):
     """处理场景执行和处理。"""
 
     def __init__(self, parser, state_manager, command_executor, condition_evaluator):

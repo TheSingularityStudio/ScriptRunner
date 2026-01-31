@@ -94,5 +94,4 @@ class Config:
         return self._config.copy()
 
 
-# 全局配置实例
-config = Config()
+# 移除全局配置实例，由调用方创建和管理

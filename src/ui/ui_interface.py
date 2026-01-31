@@ -93,5 +93,4 @@ class UIManager:
             self._current_backend.render_status(status_data)
 
 
-# Global UI manager instance
-ui_manager = UIManager()
+# 移除全局UI管理器实例，由调用方创建和管理

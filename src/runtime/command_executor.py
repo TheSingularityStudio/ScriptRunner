@@ -5,12 +5,13 @@ ScriptRunner 的命令执行器。
 
 from typing import Dict, Any, List
 import random
+from .interfaces import ICommandExecutor
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class CommandExecutor:
+class CommandExecutor(ICommandExecutor):
     """执行游戏脚本中的命令。"""
 
     def __init__(self, parser, state_manager, condition_evaluator):

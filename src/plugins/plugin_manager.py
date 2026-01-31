@@ -126,5 +126,4 @@ class PluginManager:
         self.plugins.clear()
 
 
-# 全局插件管理器实例
-plugin_manager = PluginManager()
+# 移除全局插件管理器实例，由调用方创建和管理
