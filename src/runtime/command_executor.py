@@ -19,15 +19,18 @@ class CommandExecutor(ICommandExecutor):
         self.state = state_manager
         self.condition_evaluator = condition_evaluator
 
-    def execute_commands(self, commands: List[Dict[str, Any]]) -> None:
-        """执行命令列表。"""
+    def execute_commands(self, commands: List[Dict[str, Any]]) -> List[str]:
+        """执行命令列表并返回所有消息。"""
+        messages = []
         for command in commands:
-            self.execute_command(command)
+            messages.extend(self.execute_command(command))
+        return messages
 
-    def execute_command(self, command: Dict[str, Any]) -> None:
-        """执行单个命令。"""
+    def execute_command(self, command: Dict[str, Any]) -> List[str]:
+        """执行单个命令并返回消息列表。"""
+        messages = []
         if not command:
-            return
+            return messages
 
         # 获取命令类型
         command_type = list(command.keys())[0]
@@ -45,7 +48,7 @@ class CommandExecutor(ICommandExecutor):
             elif command_type == 'clear_flag':
                 self.state.clear_flag(command_value)
             elif command_type == 'roll_table':
-                self._execute_roll_table(command_value)
+                messages.extend(self._execute_roll_table(command_value))
             elif command_type == 'apply_effect':
                 self._execute_apply_effect(command_value)
             elif command_type == 'remove_effect':
@@ -53,15 +56,16 @@ class CommandExecutor(ICommandExecutor):
             elif command_type == 'goto':
                 self.state.set_current_scene(command_value)
             elif command_type == 'if':
-                self._execute_if(command)
+                messages.extend(self._execute_if(command))
             elif command_type == 'attack':
-                self._execute_attack(command_value)
+                messages.extend(self._execute_attack(command_value))
             elif command_type == 'search':
-                self._execute_search(command_value)
+                messages.extend(self._execute_search(command_value))
             else:
                 logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:
             logger.error(f"Error executing command {command}: {e}")
+        return messages
 
     def _execute_set(self, expression: str) -> None:
         """执行设置命令，如 'has_key = true' 或 'health = 100'。"""
@@ -90,17 +94,18 @@ class CommandExecutor(ICommandExecutor):
         self.state.set_variable(key, value)
         logger.debug(f"Set variable {key} = {value}")
 
-    def _execute_roll_table(self, table_name: str) -> None:
-        """执行随机表滚动。"""
+    def _execute_roll_table(self, table_name: str) -> List[str]:
+        """执行随机表滚动并返回消息。"""
+        messages = []
         table = self.parser.get_random_table(table_name)
         if not table:
             logger.warning(f"Random table not found: {table_name}")
-            return
+            return messages
 
         entries = table.get('entries', [])
         if not entries:
             logger.warning(f"Random table {table_name} has no entries")
-            return
+            return messages
 
         # 随机选择条目
         result = random.choice(entries)
@@ -108,7 +113,8 @@ class CommandExecutor(ICommandExecutor):
 
         # 如果结果有命令，执行它们
         if isinstance(result, dict) and 'commands' in result:
-            self.execute_commands(result['commands'])
+            messages.extend(self.execute_commands(result['commands']))
+        return messages
 
     def _execute_apply_effect(self, effect_name: str) -> None:
         """应用效果。"""
@@ -128,16 +134,18 @@ class CommandExecutor(ICommandExecutor):
             self.state.set_variable(name, value)
             logger.debug(f"Set variable {name} = {value}")
 
-    def _execute_if(self, command: Dict[str, Any]) -> None:
-        """执行条件命令。"""
+    def _execute_if(self, command: Dict[str, Any]) -> List[str]:
+        """执行条件命令并返回消息。"""
+        messages = []
         condition = command.get('if')
         then_commands = command.get('then', [])
         else_commands = command.get('else', [])
 
         if self.condition_evaluator.evaluate_condition(condition):
-            self.execute_commands(then_commands)
+            messages.extend(self.execute_commands(then_commands))
         else:
-            self.execute_commands(else_commands)
+            messages.extend(self.execute_commands(else_commands))
+        return messages
 
     def _evaluate_expression(self, expression: str, context: dict) -> Any:
         """简单表达式评估器。"""
@@ -169,8 +177,9 @@ class CommandExecutor(ICommandExecutor):
             logger.error(f"Error evaluating expression '{expression}': {e}")
             return 0
 
-    def _execute_attack(self, target: str) -> None:
-        """执行攻击命令。"""
+    def _execute_attack(self, target: str) -> List[str]:
+        """执行攻击命令并返回消息。"""
+        messages = []
         # 获取玩家属性
         player_attrs = {}
         for attr in ['strength', 'agility', 'defense', 'health']:
@@ -180,7 +189,7 @@ class CommandExecutor(ICommandExecutor):
         target_obj = self.parser.get_object(target)
         if not target_obj:
             logger.warning(f"Attack target not found: {target}")
-            return
+            return messages
 
         target_attrs = target_obj.get('attributes', {})
         behaviors = target_obj.get('behaviors', {})
@@ -211,32 +220,38 @@ class CommandExecutor(ICommandExecutor):
             # 成功消息
             success_msg = attack_behavior.get('success', '你击中了{target}，造成{damage}点伤害！')
             success_msg = success_msg.replace('{target}', target).replace('{damage}', str(damage))
-            print(success_msg)
+            messages.append(success_msg)
             logger.info(success_msg)
         else:
             # 失败
             failure_msg = attack_behavior.get('failure', '你没能打中{target}')
             failure_msg = failure_msg.replace('{target}', target)
-            print(failure_msg)
+            messages.append(failure_msg)
             logger.info(failure_msg)
 
         # 反击
         counter_msg = attack_behavior.get('counter', '')
         if counter_msg:
-            print(counter_msg)
+            messages.append(counter_msg)
             logger.info(counter_msg)
             # 反击伤害，暂时固定为5
             player_health = self.state.get_variable('health', 100)
             self.state.set_variable('health', max(0, player_health - 5))
-            print(f"你受到了5点反击伤害！")
+            counter_damage_msg = "你受到了5点反击伤害！"
+            messages.append(counter_damage_msg)
             logger.info("Player took 5 counter damage")
+        return messages
 
-    def _execute_search(self, location: str) -> None:
-        """执行搜索命令。"""
+    def _execute_search(self, location: str) -> List[str]:
+        """执行搜索命令并返回消息。"""
+        messages = []
         logger.info(f"Searching {location}...")
 
         # 尝试滚动森林战利品表（如果适用）
         if location == 'forest_path':
-            self._execute_roll_table('forest_loot')
+            messages.extend(self._execute_roll_table('forest_loot'))
         else:
-            logger.info(f"No items found while searching {location}.")
+            msg = f"No items found while searching {location}."
+            messages.append(msg)
+            logger.info(msg)
+        return messages

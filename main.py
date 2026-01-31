@@ -104,25 +104,34 @@ def main():
         # 主游戏循环
         invalid_choice_count = 0
         max_invalid_choices = 5  # 限制无效选择次数
+        rerender = True
         while current_scene_id:
             # 更新效果状态
             execution_engine.effects_manager.update_effects()
 
-            # 执行当前场景
-            scene_data = execution_engine.execute_scene(current_scene_id)
+            if rerender:
+                # 执行当前场景
+                scene_data = execution_engine.execute_scene(current_scene_id)
 
-            # 渲染场景
-            renderer.render_scene(scene_data)
+                # 渲染场景
+                renderer.render_scene(scene_data)
+
+            rerender = True  # 默认重新渲染
 
             # 获取玩家选择
             choice_index = renderer.get_player_choice()
 
             if choice_index == -1:
-                # 未做选择，继续当前场景
+                # 未做选择，继续当前场景，不重新渲染
+                rerender = False
                 continue
 
             # 流程选择
-            next_scene = execution_engine.process_choice(choice_index)
+            next_scene, messages = execution_engine.process_choice(choice_index)
+
+            # 显示命令执行消息
+            if messages:
+                renderer.show_message('\n'.join(messages))
 
             if next_scene:
                 current_scene_id = next_scene

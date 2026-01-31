@@ -43,8 +43,8 @@ class IChoiceProcessor(ABC):
     """选择处理器接口。"""
 
     @abstractmethod
-    def process_choice(self, choice_index: int) -> Optional[str]:
-        """处理玩家选择并返回下一个场景。"""
+    def process_choice(self, choice_index: int) -> tuple[Optional[str], List[str]]:
+        """处理玩家选择并返回下一个场景和消息列表。"""
         pass
 
     @abstractmethod

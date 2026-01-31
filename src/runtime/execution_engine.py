@@ -40,8 +40,8 @@ class ExecutionEngine(IExecutionEngine):
 
 
 
-    def process_choice(self, choice_index: int) -> Optional[str]:
-        """处理玩家选择并返回下一个场景。"""
+    def process_choice(self, choice_index: int) -> tuple[Optional[str], List[str]]:
+        """处理玩家选择并返回下一个场景和消息。"""
         return self.choice_processor.process_choice(choice_index)
 
     def process_player_input(self, input_text: str) -> Dict[str, Any]:

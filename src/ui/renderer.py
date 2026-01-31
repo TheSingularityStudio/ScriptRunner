@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Dict, Any, List
 from .ui_interface import UIBackend
 from ..logging.logger import get_logger
@@ -88,6 +89,7 @@ class ConsoleRenderer(UIBackend):
     def show_message(self, message: str):
         """向玩家显示消息。"""
         print(f"\n{message}")
+        input("按回车键继续...")  # 等待用户按回车
 
     def clear_screen(self):
         """清除控制台屏幕。"""

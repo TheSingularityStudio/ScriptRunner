@@ -18,8 +18,9 @@ class ChoiceProcessor(IChoiceProcessor):
         self.state = state_manager
         self.command_executor = command_executor
 
-    def process_choice(self, choice_index: int) -> Optional[str]:
-        """处理玩家的选择并返回下一个场景 ID。"""
+    def process_choice(self, choice_index: int) -> tuple[Optional[str], List[str]]:
+        """处理玩家的选择并返回下一个场景和消息列表。"""
+        messages = []
         logger.debug(f"Processing choice index: {choice_index}")
 
         current_scene = self.parser.get_scene(self.state.get_current_scene())
@@ -29,18 +30,18 @@ class ChoiceProcessor(IChoiceProcessor):
             choice = choices[choice_index]
 
             # 执行与所选项相关的命令
-            self.command_executor.execute_commands(choice.get('commands', []))
+            messages.extend(self.command_executor.execute_commands(choice.get('commands', [])))
 
             next_scene = choice.get('next')
             if next_scene:
                 logger.debug(f"Navigating to scene: {next_scene}")
-                return next_scene
+                return next_scene, messages
             else:
                 logger.debug("Choice processed but no next scene specified")
         else:
             logger.warning(f"Invalid choice index: {choice_index}, available choices: {len(choices)}")
 
-        return None
+        return None, messages
 
     def get_available_choices(self) -> List[Dict[str, Any]]:
         """获取当前可用选择列表。"""
