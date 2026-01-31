@@ -37,8 +37,10 @@ class MetaManager:
                     self.dynamic_scripts = meta_data['dynamic_scripts']
                     logger.info(f"Loaded {len(self.dynamic_scripts)} dynamic scripts")
 
+        except (AttributeError, TypeError, KeyError) as e:
+            logger.warning(f"Failed to load meta data due to data structure error: {e}")
         except Exception as e:
-            logger.warning(f"Failed to load meta data: {e}")
+            logger.error(f"Unexpected error loading meta data: {e}")
 
     def evaluate_macro(self, macro_name: str, **kwargs) -> bool:
         """评估宏条件。"""

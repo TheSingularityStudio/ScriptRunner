@@ -41,8 +41,10 @@ class StateMachineManager(IStateMachineManager):
                         self.state.set_variable(f"{sm_name}_state", initial_state)
                         logger.debug(f"Initialized state machine '{sm_name}' to state '{initial_state}'")
 
+        except (AttributeError, TypeError, KeyError) as e:
+            logger.warning(f"Failed to load state machines due to data structure error: {e}")
         except Exception as e:
-            logger.warning(f"Failed to load state machines: {e}")
+            logger.error(f"Unexpected error loading state machines: {e}")
 
     def update_state_machines(self) -> None:
         """更新所有状态机，检查转换条件。"""

@@ -173,8 +173,11 @@ class CommandExecutor(ICommandExecutor):
         # 评估表达式
         try:
             return eval(expression, {"__builtins__": {}}, safe_context)
-        except Exception as e:
+        except (NameError, TypeError, SyntaxError, ZeroDivisionError) as e:
             logger.error(f"Error evaluating expression '{expression}': {e}")
+            return 0
+        except Exception as e:
+            logger.error(f"Unexpected error evaluating expression '{expression}': {e}")
             return 0
 
     def _execute_attack(self, target: str) -> List[str]:

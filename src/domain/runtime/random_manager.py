@@ -32,8 +32,10 @@ class RandomManager(IRandomManager):
                 self.random_tables = random_data.get('tables', {})
                 logger.info(f"Loaded {len(self.random_tables)} random tables")
 
+        except (AttributeError, TypeError, KeyError) as e:
+            logger.warning(f"Failed to load random tables due to data structure error: {e}")
         except Exception as e:
-            logger.warning(f"Failed to load random tables: {e}")
+            logger.error(f"Unexpected error loading random tables: {e}")
 
     def roll_random_range(self, range_str: str) -> Union[int, float]:
         """从范围字符串中生成随机数，如 '20-40' 或 '1.5-3.0'。"""
@@ -121,8 +123,11 @@ class RandomManager(IRandomManager):
             else:
                 return random.sample(items, count)
 
-        except Exception as e:
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
             logger.error(f"Error parsing random list '{list_expr}': {e}")
+            return []
+        except Exception as e:
+            logger.error(f"Unexpected error parsing random list '{list_expr}': {e}")
             return []
 
     def generate_procedural_name(self, template: str, **replacements) -> str:
@@ -203,8 +208,11 @@ class RandomManager(IRandomManager):
 
             return result
 
-        except Exception as e:
+        except (TypeError, ValueError, OverflowError) as e:
             logger.error(f"Error calculating random modifier for {base_value}: {e}")
+            return base_value
+        except Exception as e:
+            logger.error(f"Unexpected error calculating random modifier for {base_value}: {e}")
             return base_value
 
     def shuffle_list(self, items: List[Any]) -> List[Any]:
