@@ -5,12 +5,13 @@ ScriptRunner 的状态机管理器。
 
 from typing import Dict, Any, List, Optional
 import time
+from .interfaces import IStateMachineManager
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class StateMachineManager:
+class StateMachineManager(IStateMachineManager):
     """管理游戏状态机系统。"""
 
     def __init__(self, parser, state_manager, command_executor, condition_evaluator):
@@ -195,3 +196,26 @@ class StateMachineManager:
     def get_state_machine_info(self, sm_name: str) -> Optional[Dict[str, Any]]:
         """获取状态机信息。"""
         return self.state_machines.get(sm_name)
+
+    def transition_state(self, machine_name: str, event: str) -> bool:
+        """状态转换。"""
+        if machine_name not in self.state_machines:
+            return False
+
+        current_state = self.get_current_state(machine_name)
+        if not current_state:
+            return False
+
+        sm_data = self.state_machines[machine_name]
+        states = sm_data.get('states', {})
+        state_def = states.get(current_state, {})
+
+        transitions = state_def.get('transitions', [])
+        for transition in transitions:
+            if transition.get('event') == event and self._check_transition_condition(transition):
+                new_state = transition.get('to')
+                if new_state and new_state != current_state:
+                    self._execute_state_transition(machine_name, current_state, new_state, transition)
+                    return True
+
+        return False

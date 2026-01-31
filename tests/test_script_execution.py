@@ -62,9 +62,24 @@ class TestScriptExecution:
         choice_processor = Mock()
         input_handler = Mock()
 
+        # Initialize managers
+        from src.domain.runtime.effects_manager import EffectsManager
+        from src.domain.runtime.event_manager import EventManager
+        from src.domain.runtime.random_manager import RandomManager
+        from src.domain.runtime.state_machine_manager import StateMachineManager
+        from src.domain.runtime.meta_manager import MetaManager
+
+        effects_manager = EffectsManager(parser, state_manager, command_executor)
+        event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        random_manager = RandomManager(parser, state_manager)
+        state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
+        meta_manager = MetaManager(parser, state_manager, condition_evaluator)
+
         execution_engine = ExecutionEngine(
             parser, state_manager, scene_executor, command_executor,
-            condition_evaluator, choice_processor, input_handler
+            condition_evaluator, choice_processor, input_handler,
+            event_manager, effects_manager, state_machine_manager,
+            meta_manager, random_manager
         )
 
         # 加载脚本
@@ -106,9 +121,24 @@ class TestScriptExecution:
         choice_processor = ChoiceProcessor(parser, state_manager, command_executor)
         input_handler = Mock()
 
+        # Initialize managers
+        from src.domain.runtime.effects_manager import EffectsManager
+        from src.domain.runtime.event_manager import EventManager
+        from src.domain.runtime.random_manager import RandomManager
+        from src.domain.runtime.state_machine_manager import StateMachineManager
+        from src.domain.runtime.meta_manager import MetaManager
+
+        effects_manager = EffectsManager(parser, state_manager, command_executor)
+        event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        random_manager = RandomManager(parser, state_manager)
+        state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
+        meta_manager = MetaManager(parser, state_manager, condition_evaluator)
+
         execution_engine = ExecutionEngine(
             parser, state_manager, scene_executor, command_executor,
-            condition_evaluator, choice_processor, input_handler
+            condition_evaluator, choice_processor, input_handler,
+            event_manager, effects_manager, state_machine_manager,
+            meta_manager, random_manager
         )
 
         # 加载脚本

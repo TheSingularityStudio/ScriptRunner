@@ -17,6 +17,11 @@ class TestExecutionEngine:
         self.mock_condition_evaluator = Mock()
         self.mock_choice_processor = Mock()
         self.mock_input_handler = Mock()
+        self.mock_event_manager = Mock()
+        self.mock_effects_manager = Mock()
+        self.mock_state_machine_manager = Mock()
+        self.mock_meta_manager = Mock()
+        self.mock_random_manager = Mock()
 
     def test_initialization(self):
         """测试 ExecutionEngine 初始化。"""
@@ -27,7 +32,12 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler
+            self.mock_input_handler,
+            self.mock_event_manager,
+            self.mock_effects_manager,
+            self.mock_state_machine_manager,
+            self.mock_meta_manager,
+            self.mock_random_manager
         )
 
         assert engine.parser == self.mock_parser
@@ -37,6 +47,11 @@ class TestExecutionEngine:
         assert engine.condition_evaluator == self.mock_condition_evaluator
         assert engine.choice_processor == self.mock_choice_processor
         assert engine.input_handler == self.mock_input_handler
+        assert engine.event_manager == self.mock_event_manager
+        assert engine.effects_manager == self.mock_effects_manager
+        assert engine.state_machine_manager == self.mock_state_machine_manager
+        assert engine.meta_manager == self.mock_meta_manager
+        assert engine.random_manager == self.mock_random_manager
 
     def test_execute_scene(self):
         """测试场景执行。"""
@@ -47,7 +62,12 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler
+            self.mock_input_handler,
+            self.mock_event_manager,
+            self.mock_effects_manager,
+            self.mock_state_machine_manager,
+            self.mock_meta_manager,
+            self.mock_random_manager
         )
 
         expected_result = {'text': 'Scene content', 'choices': []}
@@ -67,7 +87,12 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler
+            self.mock_input_handler,
+            self.mock_event_manager,
+            self.mock_effects_manager,
+            self.mock_state_machine_manager,
+            self.mock_meta_manager,
+            self.mock_random_manager
         )
 
         expected_next_scene = 'next_scene'
@@ -87,7 +112,12 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler
+            self.mock_input_handler,
+            self.mock_event_manager,
+            self.mock_effects_manager,
+            self.mock_state_machine_manager,
+            self.mock_meta_manager,
+            self.mock_random_manager
         )
 
         self.mock_choice_processor.process_choice.return_value = None
@@ -106,7 +136,12 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler
+            self.mock_input_handler,
+            self.mock_event_manager,
+            self.mock_effects_manager,
+            self.mock_state_machine_manager,
+            self.mock_meta_manager,
+            self.mock_random_manager
         )
 
         expected_result = {'action': 'move', 'target': 'north'}

@@ -5,12 +5,13 @@ ScriptRunner 的效果管理器。
 
 from typing import Dict, Any, List, Optional
 import time
+from .interfaces import IEffectsManager
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class EffectsManager:
+class EffectsManager(IEffectsManager):
     """管理游戏效果系统。"""
 
     def __init__(self, parser, state_manager, command_executor):

@@ -1,10 +1,12 @@
+"""
+ScriptRunner 执行引擎模块。
+协调各个运行时组件以执行游戏逻辑。
+"""
+
 from typing import Dict, Any, List, Optional
-from .interfaces import IExecutionEngine, ISceneExecutor, ICommandExecutor, IConditionEvaluator, IChoiceProcessor, IInputHandler
-from .event_manager import EventManager
-from .effects_manager import EffectsManager
-from .state_machine_manager import StateMachineManager
-from .meta_manager import MetaManager
-from .random_manager import RandomManager
+from .interfaces import (IExecutionEngine, ISceneExecutor, ICommandExecutor, IConditionEvaluator,
+                         IChoiceProcessor, IInputHandler, IEventManager, IEffectsManager,
+                         IStateMachineManager, IMetaManager, IRandomManager)
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
@@ -13,28 +15,26 @@ logger = get_logger(__name__)
 class ExecutionEngine(IExecutionEngine):
     def __init__(self, parser, state_manager, scene_executor: ISceneExecutor,
                  command_executor: ICommandExecutor, condition_evaluator: IConditionEvaluator,
-                 choice_processor: IChoiceProcessor, input_handler: IInputHandler):
+                 choice_processor: IChoiceProcessor, input_handler: IInputHandler,
+                 event_manager: IEventManager, effects_manager: IEffectsManager,
+                 state_machine_manager: IStateMachineManager, meta_manager: IMetaManager,
+                 random_manager: IRandomManager):
         self.parser = parser
         self.state = state_manager
         self.scene_executor = scene_executor
         self.command_executor = command_executor
         self.condition_evaluator = condition_evaluator
         self.choice_processor = choice_processor
-        # Create event_manager first
-        self.event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        self.event_manager = event_manager
+        self.effects_manager = effects_manager
+        self.state_machine_manager = state_machine_manager
+        self.meta_manager = meta_manager
+        self.random_manager = random_manager
+
         # Pass event_manager and condition_evaluator to input_handler
         input_handler.event_manager = self.event_manager
         input_handler.condition_evaluator = self.condition_evaluator
         self.input_handler = input_handler
-        self.effects_manager = EffectsManager(parser, state_manager, command_executor)
-        self.state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
-        self.meta_manager = MetaManager(parser, state_manager, condition_evaluator)
-        self.random_manager = RandomManager(parser, state_manager)
-
-        # 加载状态机、元数据和随机表
-        self.state_machine_manager.load_state_machines()
-        self.meta_manager.load_meta_data()
-        self.random_manager.load_random_tables()
 
         logger.info("ExecutionEngine initialized with dependency injection")
 

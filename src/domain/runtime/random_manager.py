@@ -6,12 +6,13 @@ ScriptRunner 的随机管理器。
 from typing import Dict, Any, List, Optional, Union
 import random
 import re
+from .interfaces import IRandomManager
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class RandomManager:
+class RandomManager(IRandomManager):
     """管理游戏随机系统，包括加权随机和程序化生成。"""
 
     def __init__(self, parser, state_manager):
@@ -268,3 +269,11 @@ class RandomManager:
     def list_tables(self) -> List[str]:
         """列出所有随机表名称。"""
         return list(self.random_tables.keys())
+
+    def roll_dice(self, sides: int) -> int:
+        """掷骰子。"""
+        return random.randint(1, sides)
+
+    def get_random_from_table(self, table_name: str) -> Any:
+        """从随机表获取随机值。"""
+        return self.roll_weighted_table(table_name)

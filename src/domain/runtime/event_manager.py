@@ -6,12 +6,13 @@ ScriptRunner 的事件管理器。
 from typing import Dict, Any, List, Optional
 import random
 import time
+from .interfaces import IEventManager
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class EventManager:
+class EventManager(IEventManager):
     """管理游戏事件系统。"""
 
     def __init__(self, parser, state_manager, command_executor, condition_evaluator):

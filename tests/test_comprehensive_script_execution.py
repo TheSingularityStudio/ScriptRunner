@@ -52,7 +52,9 @@ class TestComprehensiveScriptExecution:
         # 创建执行引擎
         self.execution_engine = ExecutionEngine(
             self.parser, self.state_manager, self.scene_executor, self.command_executor,
-            self.condition_evaluator, self.choice_processor, self.input_handler
+            self.condition_evaluator, self.choice_processor, self.input_handler,
+            self.event_manager, self.effects_manager, self.state_machine_manager,
+            self.meta_manager, self.random_manager
         )
 
     def test_full_script_execution_with_all_features(self):

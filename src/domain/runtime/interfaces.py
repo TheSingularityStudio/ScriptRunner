@@ -62,6 +62,121 @@ class IInputHandler(ABC):
         pass
 
 
+class IEventManager(ABC):
+    """事件管理器接口。"""
+
+    @abstractmethod
+    def check_scheduled_events(self) -> None:
+        """检查定时事件。"""
+        pass
+
+    @abstractmethod
+    def check_reactive_events(self, trigger_type: str, **kwargs) -> None:
+        """检查反应事件。"""
+        pass
+
+    @abstractmethod
+    def update_game_time(self, delta_time: float) -> None:
+        """更新游戏时间。"""
+        pass
+
+    @abstractmethod
+    def trigger_player_action(self, action: str, **kwargs) -> None:
+        """触发玩家动作事件。"""
+        pass
+
+
+class IEffectsManager(ABC):
+    """效果管理器接口。"""
+
+    @abstractmethod
+    def apply_effect(self, effect_name: str, target: Optional[str] = None) -> bool:
+        """应用效果。"""
+        pass
+
+    @abstractmethod
+    def remove_effect(self, effect_name: str) -> bool:
+        """移除效果。"""
+        pass
+
+    @abstractmethod
+    def update_effects(self) -> None:
+        """更新效果。"""
+        pass
+
+    @abstractmethod
+    def get_active_effects(self, target: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+        """获取活跃效果。"""
+        pass
+
+    @abstractmethod
+    def has_effect(self, effect_name: str, target: Optional[str] = None) -> bool:
+        """检查是否有指定效果。"""
+        pass
+
+    @abstractmethod
+    def get_effect_modifier(self, stat_name: str, target: Optional[str] = None) -> float:
+        """获取效果修正值。"""
+        pass
+
+
+class IStateMachineManager(ABC):
+    """状态机管理器接口。"""
+
+    @abstractmethod
+    def load_state_machines(self) -> None:
+        """加载状态机。"""
+        pass
+
+    @abstractmethod
+    def get_current_state(self, machine_name: str) -> Optional[str]:
+        """获取当前状态。"""
+        pass
+
+    @abstractmethod
+    def transition_state(self, machine_name: str, event: str) -> bool:
+        """状态转换。"""
+        pass
+
+
+class IMetaManager(ABC):
+    """元数据管理器接口。"""
+
+    @abstractmethod
+    def load_meta_data(self) -> None:
+        """加载元数据。"""
+        pass
+
+    @abstractmethod
+    def get_meta_value(self, key: str) -> Any:
+        """获取元数据值。"""
+        pass
+
+    @abstractmethod
+    def set_meta_value(self, key: str, value: Any) -> None:
+        """设置元数据值。"""
+        pass
+
+
+class IRandomManager(ABC):
+    """随机管理器接口。"""
+
+    @abstractmethod
+    def load_random_tables(self) -> None:
+        """加载随机表。"""
+        pass
+
+    @abstractmethod
+    def roll_dice(self, sides: int) -> int:
+        """掷骰子。"""
+        pass
+
+    @abstractmethod
+    def get_random_from_table(self, table_name: str) -> Any:
+        """从随机表获取随机值。"""
+        pass
+
+
 class IExecutionEngine(ABC):
     """执行引擎接口。"""
 
@@ -71,7 +186,7 @@ class IExecutionEngine(ABC):
         pass
 
     @abstractmethod
-    def process_choice(self, choice_index: int) -> Optional[str]:
+    def process_choice(self, choice_index: int) -> tuple[Optional[str], List[str]]:
         """处理选择。"""
         pass
 
