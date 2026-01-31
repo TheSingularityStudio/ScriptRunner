@@ -6,8 +6,9 @@
 
 import sys
 import os
+import yaml
 from src.infrastructure.container import Container
-from src.infrastructure.logger import setup_logging, get_logger
+from src.infrastructure.logger import get_logger
 from src.infrastructure.config import Config
 from src.presentation.ui.ui_interface import UIManager
 from src.infrastructure.plugin_manager import PluginManager
@@ -15,24 +16,13 @@ from src.utils.exceptions import GameError, ScriptError, ConfigurationError
 from src.domain.parser.parser import ScriptParser
 from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
-from src.presentation.ui.renderer import ConsoleRenderer
 from src.application.initializer import ApplicationInitializer
 
 # 创建 DI 容器
 container = Container()
 
-# 注册核心组件到 DI 容器
-config = Config()
-ui_manager = UIManager()
-plugin_manager = PluginManager()
-container.register('config', config)
-container.register('ui_manager', ui_manager)
-container.register('plugin_manager', plugin_manager)
-
 
 def main():
-    # 设置日志配置
-    setup_logging()
     logger = get_logger('main')
 
     # 验证脚本文件路径
@@ -41,24 +31,27 @@ def main():
     elif len(sys.argv) == 2:
         script_file = sys.argv[1]
     else:
-        print("用法: python main.py [脚本文件]")
-        print("如果不指定脚本文件，将使用默认脚本: scripts/example_game.yaml")
-        print("示例: python main.py scripts/example_game.yaml")
+        logger.error("用法: python main.py [脚本文件]")
+        logger.error("如果不指定脚本文件，将使用默认脚本: scripts/example_game.yaml")
+        logger.error("示例: python main.py scripts/example_game.yaml")
         sys.exit(1)
+
+    # 规范化文件路径
+    script_file = os.path.normpath(os.path.abspath(script_file))
 
     # 检查脚本文件是否存在且可读
     if not os.path.isfile(script_file):
         logger.error(f"Script file not found: {script_file}")
-        print(f"错误: 脚本文件不存在: {script_file}")
+        logger.error(f"错误: 脚本文件不存在: {script_file}")
         sys.exit(1)
     if not os.access(script_file, os.R_OK):
         logger.error(f"Script file not readable: {script_file}")
-        print(f"错误: 脚本文件不可读: {script_file}")
+        logger.error(f"错误: 脚本文件不可读: {script_file}")
         sys.exit(1)
 
     try:
         # 创建并初始化应用程序
-        initializer = ApplicationInitializer(container, ui_manager, plugin_manager)
+        initializer = ApplicationInitializer(container)
         initializer.initialize()
 
         # 从 DI 容器获取组件
@@ -66,29 +59,45 @@ def main():
         state_manager = container.get('state_manager')
         execution_engine = container.get('execution_engine')
 
-        # 初始化渲染器
-        try:
-            from src.presentation.ui.renderer import ConsoleRenderer
-            renderer = ConsoleRenderer(execution_engine)
-            logger.info("Renderer initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize renderer: {e}")
-            raise ConfigurationError(f"渲染器初始化失败: {e}")
+        # 初始化 state_manager 为 None，以防后续使用
+        if state_manager is None:
+            raise ConfigurationError("State manager could not be initialized")
+
+        # 获取渲染器
+        renderer = container.get('renderer')
+        logger.info("Renderer initialized successfully")
 
         # 加载游戏脚本
         logger.info(f"Loading game script: {script_file}")
         print(f"正在加载游戏脚本: {script_file}")
-        parser.load_script(script_file)
+        try:
+            parser.load_script(script_file)
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error in script file: {e}")
+            print(f"脚本文件 YAML 解析错误: {e}")
+            sys.exit(1)
+        except ValueError as e:
+            logger.error(f"Script validation error: {e}")
+            print(f"脚本验证错误: {e}")
+            sys.exit(1)
+        except Exception as e:
+            logger.error(f"Unexpected error loading script: {e}")
+            print(f"加载脚本意外错误: {e}")
+            sys.exit(1)
 
         # 初始化玩家属性
         try:
             player_data = parser.script_data.get('player', {})
-            if 'attributes' in player_data:
+            if player_data and 'attributes' in player_data and isinstance(player_data['attributes'], dict):
                 for attr, value in player_data['attributes'].items():
                     state_manager.set_variable(attr, value)
                 logger.info("Player attributes initialized successfully")
             else:
-                logger.warning("No player attributes found in script data")
+                logger.warning("No valid player attributes found in script data, using defaults")
+                # 设置默认玩家属性
+                state_manager.set_variable('health', 100)
+                state_manager.set_variable('name', 'Player')
+                logger.info("Default player attributes set")
         except KeyError as e:
             logger.error(f"Error initializing player attributes: {e}")
             raise ScriptError(f"玩家属性初始化失败: {e}")
@@ -136,7 +145,8 @@ def main():
             if next_scene:
                 current_scene_id = next_scene
                 invalid_choice_count = 0  # 重置计数器
-            else:
+            elif not messages:
+                # 只有在没有消息（表示无效选择）时才递增计数器
                 invalid_choice_count += 1
                 if invalid_choice_count >= max_invalid_choices:
                     logger.warning(f"Too many invalid choices ({invalid_choice_count}), ending game")
@@ -144,17 +154,18 @@ def main():
                     break
                 print(f"\n无效的选择，请重试。 (剩余尝试次数: {max_invalid_choices - invalid_choice_count})")
                 continue
+            # 如果有消息但没有场景变化，认为是有效选择但不推进场景，不递增计数器
 
         print("\n感谢游玩！")
         logger.info("Game ended normally")
 
     except FileNotFoundError as e:
         logger.error(f"File not found: {e}")
-        print(f"错误: {e}")
+        logger.error(f"错误: {e}")
         sys.exit(1)
     except ValueError as e:
         logger.error(f"Script error: {e}")
-        print(f"脚本错误: {e}")
+        logger.error(f"脚本错误: {e}")
         sys.exit(1)
     except KeyboardInterrupt:
         logger.info("Game interrupted by user")
@@ -173,8 +184,13 @@ def main():
         sys.exit(0)
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
-        print(f"意外错误: {e}")
+        logger.error(f"意外错误: {e}")
         sys.exit(1)
+    finally:
+        # 清理资源
+        logger.info("Cleaning up resources")
+        # 这里可以添加更多的清理逻辑，比如关闭文件句柄、重置状态等
+        # 目前容器和组件是全局的，不需要显式清理
 
 if __name__ == "__main__":
     main()

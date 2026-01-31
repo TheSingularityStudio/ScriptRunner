@@ -7,6 +7,7 @@ from src.infrastructure.container import Container
 from src.infrastructure.logger import setup_logging
 from src.presentation.ui.ui_interface import UIManager
 from src.infrastructure.plugin_manager import PluginManager
+from src.infrastructure.config import Config
 from src.domain.parser.parser import ScriptParser
 from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
@@ -21,10 +22,8 @@ from src.presentation.ui.renderer import ConsoleRenderer
 class ApplicationInitializer:
     """应用程序初始化器，负责设置和注册所有组件。"""
 
-    def __init__(self, container: Container, ui_manager: UIManager, plugin_manager: PluginManager):
+    def __init__(self, container: Container):
         self.container = container
-        self.ui_manager = ui_manager
-        self.plugin_manager = plugin_manager
         self._initialized = False
 
     def initialize(self):
@@ -47,6 +46,14 @@ class ApplicationInitializer:
 
     def _register_core_services(self):
         """注册核心服务到DI容器。"""
+        # 创建并注册配置、UI管理器和插件管理器
+        self.config = Config()
+        self.ui_manager = UIManager()
+        self.plugin_manager = PluginManager()
+        self.container.register('config', self.config)
+        self.container.register('ui_manager', self.ui_manager)
+        self.container.register('plugin_manager', self.plugin_manager)
+
         # 注册解析器
         self.container.register('parser', ScriptParser())
 
@@ -70,6 +77,9 @@ class ApplicationInitializer:
 
         # 注册执行引擎
         self.container.register_factory('execution_engine', self._create_execution_engine)
+
+        # 注册渲染器
+        self.container.register_factory('renderer', self._create_renderer)
 
     def _create_condition_evaluator(self):
         """创建条件评估器的工厂函数。"""
@@ -121,6 +131,11 @@ class ApplicationInitializer:
         input_handler.event_manager = execution_engine.event_manager
 
         return execution_engine
+
+    def _create_renderer(self):
+        """创建渲染器的工厂函数。"""
+        execution_engine = self.container.get('execution_engine')
+        return ConsoleRenderer(execution_engine)
 
     def _register_ui_backends(self):
         """注册UI后端。"""

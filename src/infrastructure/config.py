@@ -66,7 +66,7 @@ class Config:
         return {
             'logging': {
                 'level': 'INFO',
-                'file': 'scriptrunner.log'
+                'file': 'logs/%Y-%m-%d.log'
             },
             'game': {
                 'save_file': 'game_save.json',

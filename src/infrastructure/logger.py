@@ -6,6 +6,7 @@ import logging
 import logging.config
 import os
 import threading
+from datetime import datetime
 from typing import Optional, Dict, Any
 
 
@@ -24,7 +25,12 @@ class Logger:
 
             if config is None:
                 # 使用默认配置，但允许覆盖参数
-                default_log_file = log_file or 'logs/scriptrunner.log'
+                if log_file is None:
+                    # 使用时间命名的日志文件
+                    current_date = datetime.now().strftime('%Y-%m-%d')
+                    default_log_file = f'logs/{current_date}.log'
+                else:
+                    default_log_file = log_file
                 # 确保日志目录存在
                 os.makedirs(os.path.dirname(default_log_file), exist_ok=True)
                 default_propagate = propagate if propagate is not None else True
