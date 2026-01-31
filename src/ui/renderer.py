@@ -1,3 +1,4 @@
+import os
 from typing import Dict, Any, List
 from .ui_interface import UIBackend
 
@@ -7,6 +8,7 @@ class ConsoleRenderer(UIBackend):
 
     def render_scene(self, scene_data: Dict[str, Any]):
         """渲染场景到控制台，支持DSL动态内容。"""
+        self.clear_screen()
         print("\n" + "="*50)
         print(scene_data['text'])
         print("="*50)
@@ -66,7 +68,7 @@ class ConsoleRenderer(UIBackend):
 
     def clear_screen(self):
         """清除控制台屏幕。"""
-        print("\n" * 50)  # Simple screen clear
+        os.system('cls' if os.name == 'nt' else 'clear')
 
     def render_status(self, status_data: Dict[str, Any]):
         """渲染玩家状态信息。"""
