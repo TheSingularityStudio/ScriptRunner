@@ -5,12 +5,13 @@ ScriptRunner 的元管理器。
 
 from typing import Dict, Any, List, Optional
 import re
+from .interfaces import IMetaManager
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class MetaManager:
+class MetaManager(IMetaManager):
     """管理游戏元系统，包括宏和动态脚本。"""
 
     def __init__(self, parser, state_manager, condition_evaluator):
@@ -21,6 +22,7 @@ class MetaManager:
         # 元数据存储
         self.macros: Dict[str, str] = {}
         self.dynamic_scripts: Dict[str, Dict[str, Any]] = {}
+        self.meta_values: Dict[str, Any] = {}
 
         logger.info("MetaManager initialized")
 
@@ -100,3 +102,12 @@ class MetaManager:
     def has_dynamic_script(self, script_name: str) -> bool:
         """检查动态脚本是否存在。"""
         return script_name in self.dynamic_scripts
+
+    def get_meta_value(self, key: str) -> Any:
+        """获取元数据值。"""
+        return self.meta_values.get(key)
+
+    def set_meta_value(self, key: str, value: Any) -> None:
+        """设置元数据值。"""
+        self.meta_values[key] = value
+        logger.info(f"Set meta value '{key}' to {value}")

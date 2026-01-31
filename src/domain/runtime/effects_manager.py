@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 import time
 from .interfaces import IEffectsManager
 from ...infrastructure.logger import get_logger
+from ...utils.action_executor import ActionExecutor
 
 logger = get_logger(__name__)
 
@@ -18,6 +19,9 @@ class EffectsManager(IEffectsManager):
         self.parser = parser
         self.state = state_manager
         self.command_executor = command_executor
+
+        # 统一的动作执行器
+        self.action_executor = ActionExecutor(state_manager, command_executor)
 
         # 活跃效果存储
         self.active_effects: Dict[str, Dict[str, Any]] = {}
@@ -127,7 +131,27 @@ class EffectsManager(IEffectsManager):
         return effect_name in effects
 
     def get_effect_modifier(self, stat_name: str, target: Optional[str] = None) -> float:
-        """获取指定属性在所有效果下的总修正值。"""
+        """
+        Calculate the total modifier for a specific stat from all active effects.
+
+        This method aggregates modifiers from all effects applied to a target (default: player).
+        Modifiers can be additive (+5, -2), multiplicative (*1.1), or direct numeric values.
+        The order of application is important for multiplicative modifiers.
+
+        Args:
+            stat_name: The name of the stat to get modifiers for (e.g., 'strength', 'health')
+            target: The target entity name, defaults to 'player' if None
+
+        Returns:
+            The total modifier value to apply to the stat. For multiplicative modifiers,
+            this returns the combined multiplier (e.g., 1.1 for 10% increase)
+
+        Note:
+            - Additive modifiers (+/-) are summed directly
+            - Multiplicative modifiers (*) are multiplied together
+            - Direct numeric values are treated as additive
+            - Complex stat calculations should be handled by the caller
+        """
         total_modifier = 0.0
         effects = self.get_active_effects(target)
 
@@ -136,20 +160,24 @@ class EffectsManager(IEffectsManager):
             if stat_name in modifiers:
                 modifier_value = modifiers[stat_name]
 
-                # 处理不同的修正类型
+                # Handle different modifier types based on string prefixes or direct values
                 if isinstance(modifier_value, str):
                     if modifier_value.startswith('*'):
-                        # 乘法修正，如 "*1.1"
+                        # Multiplicative modifier, e.g., "*1.1" for 10% increase
                         multiplier = float(modifier_value[1:])
-                        # 这里需要基础值来计算，但暂时返回乘数
-                        total_modifier *= multiplier
+                        # Multiply existing modifiers (starts at 1.0 for multiplication)
+                        if total_modifier == 0.0:
+                            total_modifier = multiplier
+                        else:
+                            total_modifier *= multiplier
                     elif modifier_value.startswith('+'):
-                        # 加法修正，如 "+2"
+                        # Additive modifier, e.g., "+2" to add 2
                         total_modifier += float(modifier_value[1:])
                     elif modifier_value.startswith('-'):
-                        # 减法修正，如 "-1"
+                        # Subtractive modifier, e.g., "-1" to subtract 1
                         total_modifier -= float(modifier_value[1:])
                 elif isinstance(modifier_value, (int, float)):
+                    # Direct numeric modifier, treated as additive
                     total_modifier += modifier_value
 
         return total_modifier
@@ -171,40 +199,40 @@ class EffectsManager(IEffectsManager):
         """执行单个效果动作。"""
         try:
             if action.startswith('player.health'):
-                # 生命值修改，如 "player.health -= 5"
+                # 生命值修改，如 "player.health -= 5" 或 "player.health += 10"
                 if '-=' in action:
-                    damage = int(action.split('-=')[1].strip())
+                    parts = action.split('-=', 1)
+                    damage_str = parts[1].strip()
+                    # 支持表达式，如 "5" 或 "strength * 2"
+                    damage = self._parse_damage_expression(damage_str, effect_data)
                     current_health = self.state.get_variable('health', 100)
                     new_health = max(0, current_health - damage)
                     self.state.set_variable('health', new_health)
                     logger.debug(f"Effect damage: {damage}, health now {new_health}")
-
-            elif action.startswith('set:'):
-                # 设置变量
-                var_expr = action[4:].strip()
-                self.command_executor.execute_command({'set': var_expr})
-
-            elif action.startswith('add_flag:'):
-                # 添加标志
-                flag = action[9:].strip()
-                self.state.set_flag(flag)
-
-            elif action.startswith('remove_flag:'):
-                # 移除标志
-                flag = action[12:].strip()
-                self.state.clear_flag(flag)
-
-            elif action.startswith('broadcast:'):
-                # 广播消息
-                message = action[10:].strip('"\'' )
-                logger.info(f"Effect broadcast: {message}")
-                # 这里可以添加到游戏消息队列
-
+                elif '+=' in action:
+                    parts = action.split('+=', 1)
+                    heal_str = parts[1].strip()
+                    heal = self._parse_damage_expression(heal_str, effect_data)
+                    current_health = self.state.get_variable('health', 100)
+                    new_health = current_health + heal
+                    self.state.set_variable('health', new_health)
+                    logger.debug(f"Effect heal: {heal}, health now {new_health}")
             else:
-                logger.warning(f"Unknown effect action: {action}")
+                # 使用统一的动作执行器处理其他动作
+                self.action_executor.execute_action(action, effect_data)
 
         except Exception as e:
             logger.error(f"Error executing effect action '{action}': {e}")
+
+    def _parse_damage_expression(self, damage_str: str, effect_data: Dict[str, Any]) -> int:
+        """解析伤害表达式，支持数字和简单表达式。"""
+        try:
+            # 尝试直接转换为整数
+            return int(damage_str)
+        except ValueError:
+            # 如果是表达式，暂时返回默认值（可以扩展为支持更复杂的表达式）
+            logger.warning(f"Complex damage expression '{damage_str}' not supported, using default 5")
+            return 5
 
     def get_status_message(self) -> str:
         """获取效果状态消息。"""

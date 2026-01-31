@@ -8,6 +8,7 @@ import random
 import time
 from .interfaces import IEventManager
 from ...infrastructure.logger import get_logger
+from ...utils.action_executor import ActionExecutor
 
 logger = get_logger(__name__)
 
@@ -20,6 +21,9 @@ class EventManager(IEventManager):
         self.state = state_manager
         self.command_executor = command_executor
         self.condition_evaluator = condition_evaluator
+
+        # 统一的动作执行器
+        self.action_executor = ActionExecutor(state_manager, command_executor)
 
         # 事件数据
         self.scheduled_events = []
@@ -144,15 +148,13 @@ class EventManager(IEventManager):
             if action.startswith('spawn_object:'):
                 obj_name = action[13:].strip('"\'' )
                 logger.info(f"Spawning object: {obj_name}")
-            elif action.startswith('log:'):
-                message = action[4:].strip('"\'' )
-                logger.info(f"Event log: {message}")
-            elif action.startswith('set:'):
-                # 转换为命令格式
-                self.command_executor.execute_command({'set': action[4:].strip()})
-            elif action.startswith('add_flag:'):
-                flag = action[9:].strip()
-                self.state.set_flag(flag)
+            elif action.startswith('transform:'):
+                # 对象变换
+                transform_spec = action[10:]
+                logger.info(f"Transformation triggered: {transform_spec}")
+            else:
+                # 使用统一的动作执行器处理其他动作
+                self.action_executor.execute_action(action)
 
     def update_game_time(self, delta_time: float) -> None:
         """更新游戏时间并检查定时事件。"""

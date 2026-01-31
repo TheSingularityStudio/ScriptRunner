@@ -4,12 +4,13 @@ ScriptRunner 的输入处理器。
 """
 
 from typing import Dict, Any
+from .interfaces import IInputHandler
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class InputHandler:
+class InputHandler(IInputHandler):
     """处理玩家的自然语言输入。"""
 
     def __init__(self, parser, state_manager, command_executor, event_manager=None, condition_evaluator=None):
@@ -160,7 +161,8 @@ class InputHandler:
         if obj and obj.get('type') == 'creature':
             # 使用状态管理器存储可变状态
             health_var = f"{target}_health"
-            health = self.state.get_variable(health_var, obj.get('states', [{}])[0].get('value', 30))  # 默认30
+            default_health = obj.get('states', [{}])[0].get('value', 30)  # 从配置获取，默认30
+            health = self.state.get_variable(health_var, default_health)
 
             if health > 0:
                 # 计算伤害基于玩家属性

@@ -133,10 +133,10 @@ class TestEffectsManager:
     def test_get_effect_modifier_multiplicative(self):
         """测试获取乘法修正值。"""
         self.manager.active_effects = {
-            'strength_buff': {'modifiers': {'strength': '*1.5'}}
+'strength_buff': {'modifiers': {'strength': '*1.5'}}
         }
         modifier = self.manager.get_effect_modifier('strength')
-        assert modifier == 0.0  # Multiplicative not fully implemented in test
+        assert modifier == 1.5  # Multiplicative modifier returns the multiplier value
 
     def test_execute_effect_actions_list(self):
         """测试执行效果动作列表。"""

@@ -148,35 +148,60 @@ class CommandExecutor(ICommandExecutor):
         return messages
 
     def _evaluate_expression(self, expression: str, context: dict) -> Any:
-        """简单表达式评估器。"""
-        # 创建安全的上下文，允许字典以支持点号访问
+        """
+        Safely evaluate a mathematical or logical expression with limited context.
+
+        This method provides a restricted evaluation environment to prevent code injection
+        while allowing basic arithmetic, comparisons, and access to game state variables.
+        It supports dot notation for nested dictionary access (e.g., player.health).
+
+        Args:
+            expression: The expression string to evaluate (e.g., "strength * 2 + 5")
+            context: Dictionary containing variable names and their values available in the expression
+
+        Returns:
+            The result of the expression evaluation, or 0 if evaluation fails
+
+        Note:
+            - Only safe built-in types (int, float, bool) and dictionaries are allowed in context
+            - Supports random.randint function for dice rolls
+            - Complex expressions may fail and return 0 with error logging
+        """
+        # Create a safe context that allows dictionary access via dot notation
         class DotDict(dict):
+            """Dictionary subclass that allows attribute-style access for dot notation."""
             def __getattr__(self, key):
                 return self[key]
 
         def is_safe_value(v):
+            """Check if a value is safe to include in the evaluation context."""
             if isinstance(v, (int, float, bool)):
                 return True
             elif isinstance(v, dict):
+                # Ensure all nested values are also safe
                 return all(isinstance(sub_v, (int, float, bool)) for sub_v in v.values())
             return False
 
         safe_context = {}
         for k, v in context.items():
             if isinstance(v, dict):
+                # Wrap dictionaries to support dot notation (e.g., player.health)
                 safe_context[k] = DotDict(v)
             elif is_safe_value(v):
                 safe_context[k] = v
 
+        # Add random function for dice rolls and similar mechanics
         safe_context['random'] = random.randint
 
-        # 评估表达式
+        # Evaluate the expression in the restricted environment
         try:
             return eval(expression, {"__builtins__": {}}, safe_context)
         except (NameError, TypeError, SyntaxError, ZeroDivisionError) as e:
+            # Log expected evaluation errors (invalid syntax, undefined variables, etc.)
             logger.error(f"Error evaluating expression '{expression}': {e}")
             return 0
         except Exception as e:
+            # Catch any unexpected errors during evaluation
             logger.error(f"Unexpected error evaluating expression '{expression}': {e}")
             return 0
 
@@ -237,12 +262,13 @@ class CommandExecutor(ICommandExecutor):
         if counter_msg:
             messages.append(counter_msg)
             logger.debug(counter_msg)
-            # 反击伤害，暂时固定为5
+            # 反击伤害，从配置中获取，默认5
+            counter_damage = attack_behavior.get('counter_damage', 5)
             player_health = self.state.get_variable('health', 100)
-            self.state.set_variable('health', max(0, player_health - 5))
-            counter_damage_msg = "你受到了5点反击伤害！"
+            self.state.set_variable('health', max(0, player_health - counter_damage))
+            counter_damage_msg = f"你受到了{counter_damage}点反击伤害！"
             messages.append(counter_damage_msg)
-            logger.debug("Player took 5 counter damage")
+            logger.debug(f"Player took {counter_damage} counter damage")
         return messages
 
     def _execute_search(self, location: str) -> List[str]:

@@ -7,6 +7,7 @@ from typing import Dict, Any, List, Optional
 import time
 from .interfaces import IStateMachineManager
 from ...infrastructure.logger import get_logger
+from ...utils.action_executor import ActionExecutor
 
 logger = get_logger(__name__)
 
@@ -19,6 +20,9 @@ class StateMachineManager(IStateMachineManager):
         self.state = state_manager
         self.command_executor = command_executor
         self.condition_evaluator = condition_evaluator
+
+        # 统一的动作执行器
+        self.action_executor = ActionExecutor(state_manager, command_executor)
 
         # 状态机存储
         self.state_machines: Dict[str, Dict[str, Any]] = {}
@@ -81,46 +85,77 @@ class StateMachineManager(IStateMachineManager):
         self._execute_state_actions(sm_name, state_def)
 
     def _check_transition_condition(self, transition: Dict[str, Any]) -> bool:
-        """检查状态转换条件。"""
+        """
+        Evaluate the condition for a state machine transition.
+
+        This method handles various types of transition conditions, including time-based
+        conditions and general game state conditions. Time conditions support ranges
+        using logical AND (&&) operator.
+
+        Args:
+            transition: Dictionary containing transition data, must include 'condition' key
+
+        Returns:
+            True if the condition is met and transition should occur, False otherwise
+
+        Supported condition formats:
+            - Time conditions: "time > 360", "time >= 100 && time < 200"
+            - General conditions: Any condition supported by ConditionEvaluator
+            - Empty/None conditions: Always return False (no automatic transition)
+
+        Note:
+            - Time conditions compare against the 'game_time' state variable
+            - Complex time ranges are supported via && conjunction
+            - Invalid time conditions are logged and return False
+            - Non-time conditions are delegated to the condition evaluator
+        """
         condition = transition.get('condition')
 
         if not condition:
+            # No condition means transition doesn't happen automatically
             return False
 
-        # 处理时间条件
+        # Handle time-based conditions with support for ranges
         if condition.startswith('time > ') or condition.startswith('time >= ') or \
            condition.startswith('time < ') or condition.startswith('time <= '):
             try:
-                # 解析时间条件，如 "time > 360 && time < 420"
+                # Parse compound time conditions like "time > 360 && time < 420"
                 time_conditions = condition.split('&&')
                 game_time = self.state.get_variable('game_time', 0)
 
+                # Check each time condition in the compound statement
                 for time_cond in time_conditions:
                     time_cond = time_cond.strip()
                     if time_cond.startswith('time > '):
+                        # Greater than condition: time > threshold
                         threshold = float(time_cond[7:])
                         if not (game_time > threshold):
                             return False
                     elif time_cond.startswith('time >= '):
+                        # Greater than or equal: time >= threshold
                         threshold = float(time_cond[8:])
                         if not (game_time >= threshold):
                             return False
                     elif time_cond.startswith('time < '):
+                        # Less than condition: time < threshold
                         threshold = float(time_cond[7:])
                         if not (game_time < threshold):
                             return False
                     elif time_cond.startswith('time <= '):
+                        # Less than or equal: time <= threshold
                         threshold = float(time_cond[8:])
                         if not (game_time <= threshold):
                             return False
 
+                # All time conditions in the compound statement are satisfied
                 return True
 
             except (ValueError, IndexError) as e:
+                # Log parsing errors for time conditions
                 logger.warning(f"Invalid time condition '{condition}': {e}")
                 return False
 
-        # 处理其他条件
+        # Delegate non-time conditions to the general condition evaluator
         return self.condition_evaluator.evaluate_condition(condition)
 
     def _execute_state_transition(self, sm_name: str, from_state: str, to_state: str, transition: Dict[str, Any]) -> None:
@@ -146,37 +181,7 @@ class StateMachineManager(IStateMachineManager):
 
     def _execute_action(self, action: str) -> None:
         """执行单个动作。"""
-        try:
-            if action.startswith('set:'):
-                # 设置变量
-                var_expr = action[4:].strip()
-                self.command_executor.execute_command({'set': var_expr})
-
-            elif action.startswith('add_flag:'):
-                # 添加标志
-                flag = action[9:].strip()
-                self.state.set_flag(flag)
-
-            elif action.startswith('remove_flag:'):
-                # 移除标志
-                flag = action[12:].strip()
-                self.state.clear_flag(flag)
-
-            elif action.startswith('broadcast:'):
-                # 广播消息
-                message = action[10:].strip('"\'' )
-                logger.info(f"State machine broadcast: {message}")
-
-            elif action.startswith('log:'):
-                # 日志记录
-                message = action[4:].strip('"\'' )
-                logger.info(f"State machine log: {message}")
-
-            else:
-                logger.warning(f"Unknown state machine action: {action}")
-
-        except Exception as e:
-            logger.error(f"Error executing state machine action '{action}': {e}")
+        self.action_executor.execute_action(action)
 
     def _trigger_transition_event(self, sm_name: str, from_state: str, to_state: str) -> None:
         """触发状态转换事件。"""
