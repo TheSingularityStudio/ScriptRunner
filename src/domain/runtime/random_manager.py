@@ -6,7 +6,7 @@ ScriptRunner 的随机管理器。
 from typing import Dict, Any, List, Optional, Union
 import random
 import re
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

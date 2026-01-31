@@ -5,14 +5,14 @@ Integration tests for script execution, specifically testing if scripts/example_
 import pytest
 import os
 from unittest.mock import Mock
-from src.parser.parser import ScriptParser
-from src.state.state_manager import StateManager
-from src.runtime.execution_engine import ExecutionEngine
-from src.runtime.scene_executor import SceneExecutor
-from src.runtime.command_executor import CommandExecutor
-from src.runtime.condition_evaluator import ConditionEvaluator
-from src.runtime.choice_processor import ChoiceProcessor
-from src.runtime.input_handler import InputHandler
+from src.domain.parser.parser import ScriptParser
+from src.infrastructure.state_manager import StateManager
+from src.domain.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.scene_executor import SceneExecutor
+from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.condition_evaluator import ConditionEvaluator
+from src.domain.runtime.choice_processor import ChoiceProcessor
+from src.domain.runtime.input_handler import InputHandler
 
 
 class TestScriptExecution:

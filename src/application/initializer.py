@@ -3,19 +3,19 @@ ScriptRunner 应用程序初始化器。
 负责应用程序的启动和组件注册。
 """
 
-from src.di.container import Container
-from src.logging.logger import setup_logging
-from src.ui.ui_interface import UIManager
-from src.plugins.plugin_manager import PluginManager
-from src.parser.parser import ScriptParser
-from src.state.state_manager import StateManager
-from src.runtime.execution_engine import ExecutionEngine
-from src.runtime.scene_executor import SceneExecutor
-from src.runtime.command_executor import CommandExecutor
-from src.runtime.condition_evaluator import ConditionEvaluator
-from src.runtime.choice_processor import ChoiceProcessor
-from src.runtime.input_handler import InputHandler
-from src.ui.renderer import ConsoleRenderer
+from src.infrastructure.container import Container
+from src.infrastructure.logger import setup_logging
+from src.presentation.ui.ui_interface import UIManager
+from src.infrastructure.plugin_manager import PluginManager
+from src.domain.parser.parser import ScriptParser
+from src.infrastructure.state_manager import StateManager
+from src.domain.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.scene_executor import SceneExecutor
+from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.condition_evaluator import ConditionEvaluator
+from src.domain.runtime.choice_processor import ChoiceProcessor
+from src.domain.runtime.input_handler import InputHandler
+from src.presentation.ui.renderer import ConsoleRenderer
 
 
 class ApplicationInitializer:

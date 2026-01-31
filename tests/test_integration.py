@@ -7,15 +7,15 @@ import tempfile
 import os
 import yaml
 from unittest.mock import Mock, patch
-from src.di.container import Container
-from src.parser.parser import ScriptParser
-from src.state.state_manager import StateManager
-from src.runtime.execution_engine import ExecutionEngine
-from src.runtime.scene_executor import SceneExecutor
-from src.runtime.command_executor import CommandExecutor
-from src.runtime.condition_evaluator import ConditionEvaluator
-from src.runtime.choice_processor import ChoiceProcessor
-from src.runtime.input_handler import InputHandler
+from src.infrastructure.container import Container
+from src.domain.parser.parser import ScriptParser
+from src.infrastructure.state_manager import StateManager
+from src.domain.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.scene_executor import SceneExecutor
+from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.condition_evaluator import ConditionEvaluator
+from src.domain.runtime.choice_processor import ChoiceProcessor
+from src.domain.runtime.input_handler import InputHandler
 
 
 class TestIntegration:

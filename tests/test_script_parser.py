@@ -7,7 +7,7 @@ import tempfile
 import os
 import yaml
 from unittest.mock import patch
-from src.parser.parser import ScriptParser
+from src.domain.parser.parser import ScriptParser
 
 
 class TestScriptParser:

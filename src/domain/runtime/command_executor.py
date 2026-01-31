@@ -6,7 +6,7 @@ ScriptRunner 的命令执行器。
 from typing import Dict, Any, List
 import random
 from .interfaces import ICommandExecutor
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

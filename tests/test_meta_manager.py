@@ -4,7 +4,7 @@ Unit tests for MetaManager.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.meta_manager import MetaManager
+from src.domain.runtime.meta_manager import MetaManager
 
 
 class TestMetaManager:

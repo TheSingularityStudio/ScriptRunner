@@ -4,7 +4,7 @@ Unit tests for EffectsManager.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.effects_manager import EffectsManager
+from src.domain.runtime.effects_manager import EffectsManager
 
 
 class TestEffectsManager:

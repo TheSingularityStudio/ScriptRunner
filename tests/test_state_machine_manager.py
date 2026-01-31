@@ -4,7 +4,7 @@ Unit tests for StateMachineManager.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.state_machine_manager import StateMachineManager
+from src.domain.runtime.state_machine_manager import StateMachineManager
 
 
 class TestStateMachineManager:

@@ -4,7 +4,7 @@ ScriptRunner 的依赖注入容器。提供真正的依赖注入支持。
 
 from typing import Dict, Any, Callable, Type, Optional, Union
 import inspect
-from ..logging.logger import get_logger
+from .logger import get_logger
 
 logger = get_logger(__name__)
 

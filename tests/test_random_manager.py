@@ -4,7 +4,7 @@ Unit tests for RandomManager.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.random_manager import RandomManager
+from src.domain.runtime.random_manager import RandomManager
 
 
 class TestRandomManager:

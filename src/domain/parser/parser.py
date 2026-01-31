@@ -3,7 +3,7 @@ import os
 from typing import Dict, Any, List, Optional
 import re
 from .interfaces import IScriptParser
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

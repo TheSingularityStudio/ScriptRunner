@@ -4,7 +4,7 @@ Unit tests for CommandExecutor.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.command_executor import CommandExecutor
+from src.domain.runtime.command_executor import CommandExecutor
 
 
 class TestCommandExecutor:

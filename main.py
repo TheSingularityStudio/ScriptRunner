@@ -6,16 +6,16 @@
 
 import sys
 import os
-from src.di.container import Container
-from src.logging.logger import setup_logging, get_logger
-from src.application.config import Config
-from src.ui.ui_interface import UIManager
-from src.plugins.plugin_manager import PluginManager
+from src.infrastructure.container import Container
+from src.infrastructure.logger import setup_logging, get_logger
+from src.infrastructure.config import Config
+from src.presentation.ui.ui_interface import UIManager
+from src.infrastructure.plugin_manager import PluginManager
 from src.utils.exceptions import GameError, ScriptError, ConfigurationError
-from src.parser.parser import ScriptParser
-from src.state.state_manager import StateManager
-from src.runtime.execution_engine import ExecutionEngine
-from src.ui.renderer import ConsoleRenderer
+from src.domain.parser.parser import ScriptParser
+from src.infrastructure.state_manager import StateManager
+from src.domain.runtime.execution_engine import ExecutionEngine
+from src.presentation.ui.renderer import ConsoleRenderer
 from src.application.initializer import ApplicationInitializer
 
 # 创建 DI 容器

@@ -4,7 +4,7 @@ Unit tests for EventManager.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.event_manager import EventManager
+from src.domain.runtime.event_manager import EventManager
 
 
 class TestEventManager:

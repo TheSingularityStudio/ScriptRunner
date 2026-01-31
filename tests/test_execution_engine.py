@@ -4,7 +4,7 @@ Unit tests for ExecutionEngine.
 
 import pytest
 from unittest.mock import Mock, MagicMock
-from src.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.execution_engine import ExecutionEngine
 
 
 class TestExecutionEngine:

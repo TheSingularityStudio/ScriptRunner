@@ -5,7 +5,7 @@ Unit tests for StateManager.
 import pytest
 import tempfile
 import os
-from src.state.state_manager import StateManager
+from src.infrastructure.state_manager import StateManager
 
 
 class TestStateManager:

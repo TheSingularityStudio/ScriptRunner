@@ -4,7 +4,7 @@ Unit tests for InputHandler.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.runtime.input_handler import InputHandler
+from src.domain.runtime.input_handler import InputHandler
 
 
 class TestInputHandler:
