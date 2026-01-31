@@ -198,6 +198,18 @@ random_system:
         - value: "random_item"
           weight: 20
           table: "forest_loot"
+    forest_path_search:
+      type: "weighted"
+      entries:
+        - value: "nothing"
+          weight: 60
+          message: "你搜索了周围，但没有发现什么特别的东西。"
+        - value: "hidden_cache"
+          weight: 40
+          condition: "perception_check > 15"
+          commands:
+            - spawn_object: "hidden_cache"
+          message: "你在树根下发现了一些东西！"
     dynamic_dialog:
       type: "template"
       template: "{greeting}，{player_name}。{quest_hint}"

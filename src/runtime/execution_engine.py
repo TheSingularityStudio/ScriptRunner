@@ -20,8 +20,12 @@ class ExecutionEngine(IExecutionEngine):
         self.command_executor = command_executor
         self.condition_evaluator = condition_evaluator
         self.choice_processor = choice_processor
-        self.input_handler = input_handler
+        # Create event_manager first
         self.event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        # Pass event_manager and condition_evaluator to input_handler
+        input_handler.event_manager = self.event_manager
+        input_handler.condition_evaluator = self.condition_evaluator
+        self.input_handler = input_handler
         self.effects_manager = EffectsManager(parser, state_manager, command_executor)
         self.state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
         self.meta_manager = MetaManager(parser, state_manager, condition_evaluator)

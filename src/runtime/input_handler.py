@@ -12,10 +12,12 @@ logger = get_logger(__name__)
 class InputHandler:
     """处理玩家的自然语言输入。"""
 
-    def __init__(self, parser, state_manager, command_executor):
+    def __init__(self, parser, state_manager, command_executor, event_manager=None, condition_evaluator=None):
         self.parser = parser
         self.state = state_manager
         self.command_executor = command_executor
+        self.event_manager = event_manager
+        self.condition_evaluator = condition_evaluator
 
         # 可扩展的动作注册表
         self.action_handlers = {
