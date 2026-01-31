@@ -12,7 +12,7 @@ from src.domain.parser.parser import ScriptParser
 from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
 from src.domain.runtime.scene_executor import SceneExecutor
-from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.script_command_executor import ScriptCommandExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
 from src.domain.runtime.choice_processor import ChoiceProcessor
 from src.domain.runtime.input_handler import InputHandler
@@ -43,7 +43,12 @@ class TestIntegration:
                     ]
                 }
             },
-            'start_scene': 'start'
+            'start_scene': 'start',
+            'commands': {
+                'set_variable': {
+                    'actions': ['set_variable']
+                }
+            }
         }
 
     def test_full_game_flow(self):
@@ -57,7 +62,9 @@ class TestIntegration:
             parser = ScriptParser()
             state_manager = StateManager()
             condition_evaluator = ConditionEvaluator(state_manager)
-            command_executor = CommandExecutor(parser, state_manager, condition_evaluator)
+            mock_plugin_manager = Mock()
+            mock_plugin_manager.get_plugins_by_type.return_value = []
+            command_executor = ScriptCommandExecutor(parser, state_manager, condition_evaluator, mock_plugin_manager)
             scene_executor = SceneExecutor(parser, state_manager, command_executor, condition_evaluator)
 
             # Mock choice processor and input handler

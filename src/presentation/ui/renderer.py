@@ -78,7 +78,14 @@ class ConsoleRenderer(UIBackend):
 
                 # 处理自然语言输入
                 result = self.engine.process_player_input(user_input)
-                self.show_message(result['message'])
+                if result['success']:
+                    self.show_message(result['message'])
+                    # 检查是否需要重新渲染场景（例如搜索后发现新物品）
+                    current_scene = self.engine.state.get_current_scene()
+                    scene_data = self.engine.execute_scene(current_scene)
+                    self.render_scene(scene_data)
+                else:
+                    print(f"\n{result['message']}")
                 logger.debug(f"Processed natural language input: {user_input}")
                 return -1  # Continue current scene
 

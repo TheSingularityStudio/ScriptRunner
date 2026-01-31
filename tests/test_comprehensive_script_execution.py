@@ -13,7 +13,7 @@ from src.domain.parser.parser import ScriptParser
 from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
 from src.domain.runtime.scene_executor import SceneExecutor
-from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.script_command_executor import ScriptCommandExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
 from src.domain.runtime.choice_processor import ChoiceProcessor
 from src.domain.runtime.input_handler import InputHandler
@@ -34,7 +34,9 @@ class TestComprehensiveScriptExecution:
         self.parser = ScriptParser()
         self.state_manager = StateManager()
         self.condition_evaluator = ConditionEvaluator(self.state_manager, self.parser)
-        self.command_executor = CommandExecutor(self.parser, self.state_manager, self.condition_evaluator)
+        mock_plugin_manager = Mock()
+        mock_plugin_manager.get_plugins_by_type.return_value = []
+        self.command_executor = ScriptCommandExecutor(self.parser, self.state_manager, self.condition_evaluator, mock_plugin_manager)
         self.scene_executor = SceneExecutor(self.parser, self.state_manager, self.command_executor, self.condition_evaluator)
 
         # Mock 处理器

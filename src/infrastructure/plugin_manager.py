@@ -102,6 +102,10 @@ class PluginManager:
         """获取所有已注册的插件。"""
         return self.plugins.copy()
 
+    def get_plugins_by_type(self, plugin_type: Type[PluginInterface]) -> List[PluginInterface]:
+        """根据类型获取插件列表。"""
+        return [plugin for plugin in self.plugins.values() if isinstance(plugin, plugin_type)]
+
     def _get_plugin_context(self) -> Dict[str, Any]:
         """获取在初始化期间传递给插件的上下文。"""
         # 在此处导入以避免循环导入

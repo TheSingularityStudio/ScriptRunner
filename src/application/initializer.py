@@ -12,7 +12,7 @@ from src.domain.parser.parser import ScriptParser
 from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
 from src.domain.runtime.scene_executor import SceneExecutor
-from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.script_command_executor import ScriptCommandExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
 from src.domain.runtime.choice_processor import ChoiceProcessor
 from src.domain.runtime.input_handler import InputHandler
@@ -112,7 +112,8 @@ class ApplicationInitializer:
         parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
         condition_evaluator = self.container.get('condition_evaluator')
-        return CommandExecutor(parser, state_manager, condition_evaluator)
+        plugin_manager = self.container.get('plugin_manager')
+        return ScriptCommandExecutor(parser, state_manager, condition_evaluator, plugin_manager)
 
     def _create_scene_executor(self):
         """创建场景执行器的工厂函数。"""
