@@ -3,6 +3,9 @@ import os
 from typing import Dict, Any, List, Optional
 import re
 from .interfaces import IScriptParser
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
 
 class ScriptParser(IScriptParser):
     def __init__(self):
@@ -16,14 +19,18 @@ class ScriptParser(IScriptParser):
 
     def load_script(self, file_path: str) -> Dict[str, Any]:
         """加载并解析YAML脚本文件，支持DSL语法。"""
+        logger.info(f"Loading script from file: {file_path}")
         if not os.path.exists(file_path):
+            logger.error(f"Script file not found: {file_path}")
             raise FileNotFoundError(f"脚本文件未找到: {file_path}")
 
         with open(file_path, 'r', encoding='utf-8') as file:
             self.script_data = yaml.safe_load(file)
 
+        logger.debug(f"Script data loaded with {len(self.script_data)} top-level keys")
         self._validate_script()
         self._parse_dsl_structures()
+        logger.info("Script loaded and parsed successfully")
         return self.script_data
 
     def _validate_script(self):
@@ -64,20 +71,29 @@ class ScriptParser(IScriptParser):
 
     def _parse_dsl_structures(self):
         """解析DSL结构。"""
+        logger.debug("Parsing DSL structures")
         try:
             if 'define_object' in self.script_data:
+                logger.debug("Parsing DSL objects")
                 self._parse_objects()
             if 'event_system' in self.script_data:
+                logger.debug("Parsing DSL events")
                 self._parse_events()
             if 'command_parser' in self.script_data:
+                logger.debug("Parsing DSL command parser")
                 self._parse_command_parser()
             if 'random_system' in self.script_data:
+                logger.debug("Parsing DSL random system")
                 self._parse_random_system()
             if 'state_machines' in self.script_data:
+                logger.debug("Parsing DSL state machines")
                 self._parse_state_machines()
             if 'effects' in self.script_data:
+                logger.debug("Parsing DSL effects")
                 self._parse_effects()
+            logger.debug("DSL structures parsed successfully")
         except Exception as e:
+            logger.error(f"Failed to parse DSL structures: {str(e)}")
             raise ValueError(f"DSL结构解析失败: {str(e)}")
 
     def _parse_objects(self):
@@ -245,7 +261,4 @@ class ScriptParser(IScriptParser):
 
         return target_text
 
-    def get_effect(self, effect_name: str) -> Optional[Dict[str, Any]]:
-        """获取效果定义。"""
-        effects = self.script_data.get('effects', {})
-        return effects.get(effect_name)
+

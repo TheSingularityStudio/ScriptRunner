@@ -8,6 +8,9 @@ import os
 import threading
 from typing import Dict, Any, Optional
 from pathlib import Path
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Config:
@@ -46,10 +49,13 @@ class Config:
     def load(self):
         """从文件加载配置。"""
         config_path = Path(self._config_file)
+        logger.info(f"Loading configuration from: {config_path}")
         if config_path.exists():
             with open(config_path, 'r', encoding='utf-8') as f:
                 self._config = yaml.safe_load(f) or {}
+            logger.debug(f"Configuration loaded with {len(self._config)} top-level keys")
         else:
+            logger.warning(f"Configuration file not found, using defaults: {config_path}")
             # 加载默认配置
             self._config = self._get_default_config()
 

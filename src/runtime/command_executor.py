@@ -26,59 +26,6 @@ class CommandExecutor(ICommandExecutor):
 
     def execute_command(self, command: Dict[str, Any]) -> None:
         """执行单个命令。"""
-        if 'set' in command:
-            # 设置变量
-            var_expr = command['set']
-            if '=' in var_expr:
-                var_name, value_str = var_expr.split('=', 1)
-                var_name = var_name.strip()
-                value_str = value_str.strip()
-
-                # 尝试解析值
-                try:
-                    # 检查是否是数字
-                    if value_str.isdigit() or (value_str.startswith('-') and value_str[1:].isdigit()):
-                        value = int(value_str)
-                    elif value_str.replace('.', '').isdigit() or (value_str.startswith('-') and value_str[1:].replace('.', '').isdigit()):
-                        value = float(value_str)
-                    elif value_str.lower() in ['true', 'false']:
-                        value = value_str.lower() == 'true'
-                    else:
-                        # 移除引号
-                        value = value_str.strip('"\'')
-
-                    self.state.set_variable(var_name, value)
-                    logger.debug(f"Set variable {var_name} = {value}")
-                except ValueError as e:
-                    logger.error(f"Failed to parse value '{value_str}' for variable {var_name}: {e}")
-            else:
-                logger.error(f"Invalid set command format: {var_expr}")
-
-        elif 'add_flag' in command:
-            # 添加标志
-            flag = command['add_flag']
-            self.state.set_flag(flag)
-            logger.debug(f"Added flag: {flag}")
-
-        elif 'remove_flag' in command:
-            # 移除标志
-            flag = command['remove_flag']
-            self.state.clear_flag(flag)
-            logger.debug(f"Removed flag: {flag}")
-
-        elif 'apply_effect' in command:
-            # 应用效果
-            effect_name = command['apply_effect']
-            # 这里需要访问效果管理器，但目前command_executor没有直接访问
-            # 可以通过execution_engine来访问，或者在初始化时传入
-            logger.debug(f"Apply effect command: {effect_name}")
-            # 暂时记录，稍后在场景执行器中处理
-
-        else:
-            logger.warning(f"Unknown command: {command}")
-
-    def execute_command(self, command: Dict[str, Any]) -> None:
-        """执行单个命令。"""
         if not command:
             return
 
@@ -107,6 +54,8 @@ class CommandExecutor(ICommandExecutor):
                 self.state.set_current_scene(command_value)
             elif command_type == 'if':
                 self._execute_if(command)
+            elif command_type == 'attack':
+                self._execute_attack(command_value)
             else:
                 logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:
@@ -187,3 +136,37 @@ class CommandExecutor(ICommandExecutor):
             self.execute_commands(then_commands)
         else:
             self.execute_commands(else_commands)
+
+    def _execute_attack(self, target: str) -> None:
+        """执行攻击命令。"""
+        # 获取目标对象
+        target_obj = self.parser.get_object(target)
+        if not target_obj:
+            logger.warning(f"Attack target not found: {target}")
+            return
+
+        # 找到 health 状态（states 是列表）
+        states = target_obj.get('states', [])
+        health_state = None
+        for state in states:
+            if state.get('name') == 'health':
+                health_state = state
+                break
+
+        if not health_state:
+            logger.warning(f"Target {target} has no health state")
+            return
+
+        # 获取当前生命值
+        current_health = health_state.get('value', 0)
+        damage = 10  # 固定伤害值，可以根据玩家属性计算
+        new_health = max(0, current_health - damage)
+
+        # 更新生命值
+        health_state['value'] = new_health
+        logger.info(f"Attacked {target}, dealt {damage} damage. Health: {new_health}")
+
+        # 如果目标死亡，可以添加更多逻辑
+        if new_health <= 0:
+            logger.info(f"{target} has been defeated!")
+            # 可以触发死亡事件或移除对象

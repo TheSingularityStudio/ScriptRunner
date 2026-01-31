@@ -1,5 +1,9 @@
+import os
 from typing import Dict, Any, List
 from .ui_interface import UIBackend
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
 
 class ConsoleRenderer(UIBackend):
     def __init__(self, execution_engine):
@@ -7,6 +11,7 @@ class ConsoleRenderer(UIBackend):
 
     def render_scene(self, scene_data: Dict[str, Any]):
         """渲染场景到控制台，支持DSL动态内容。"""
+        self.clear_screen()
         print("\n" + "="*50)
         print(scene_data['text'])
         print("="*50)
@@ -18,7 +23,21 @@ class ConsoleRenderer(UIBackend):
             for obj in objects:
                 obj_def = self.engine.parser.get_object(obj.get('ref', ''))
                 if obj_def:
-                    print(f"- {obj_def.get('name', obj['ref'])}")
+                    name = obj_def.get('name', obj['ref'])
+                    # 检查是否是生物并显示生命值
+                    if obj_def.get('type') == 'creature':
+                        states = obj_def.get('states', [])
+                        health_state = next((s for s in states if s.get('name') == 'health'), None)
+                        if health_state:
+                            health = health_state.get('value', 0)
+                            if health > 0:
+                                print(f"- {name} (生命值: {health})")
+                            else:
+                                print(f"- {name} (已死亡)")
+                        else:
+                            print(f"- {name}")
+                    else:
+                        print(f"- {name}")
 
         choices = scene_data.get('choices', [])
         if choices:
@@ -42,22 +61,28 @@ class ConsoleRenderer(UIBackend):
 
     def get_player_choice(self) -> int:
         """获取玩家的选择输入，支持自然语言。"""
+        logger.debug("Waiting for player input")
         while True:
             try:
                 user_input = input("\n请选择 (输入数字) 或输入命令: ").strip()
                 if not user_input:
+                    logger.debug("No input provided")
                     return -1  # No choice made
 
                 # 检查是否是数字选择
                 if user_input.isdigit():
-                    return int(user_input) - 1  # Convert to 0-based index
+                    choice = int(user_input) - 1  # Convert to 0-based index
+                    logger.debug(f"Player selected choice: {choice}")
+                    return choice
 
                 # 处理自然语言输入
                 result = self.engine.process_player_input(user_input)
                 self.show_message(result['message'])
+                logger.debug(f"Processed natural language input: {user_input}")
                 return -1  # Continue current scene
 
             except ValueError:
+                logger.warning("Invalid input format")
                 print("请输入有效的数字或命令。")
 
     def show_message(self, message: str):
@@ -66,7 +91,7 @@ class ConsoleRenderer(UIBackend):
 
     def clear_screen(self):
         """清除控制台屏幕。"""
-        print("\n" * 50)  # Simple screen clear
+        os.system('cls' if os.name == 'nt' else 'clear')
 
     def render_status(self, status_data: Dict[str, Any]):
         """渲染玩家状态信息。"""

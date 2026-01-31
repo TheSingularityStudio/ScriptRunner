@@ -4,6 +4,9 @@ ScriptRunner 的依赖注入容器。提供真正的依赖注入支持。
 
 from typing import Dict, Any, Callable, Type, Optional, Union
 import inspect
+from ..logging.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class Container:
@@ -34,21 +37,26 @@ class Container:
 
     def get(self, service_name: str) -> Any:
         """获取服务实例，如果有必要则创建它。"""
+        logger.debug(f"Resolving service: {service_name}")
         if service_name in self._services:
+            logger.debug(f"Service {service_name} found in cache")
             return self._services[service_name]
 
         if service_name in self._factories:
+            logger.debug(f"Creating service {service_name} from factory")
             service = self._factories[service_name]()
             # 缓存单例实例
             self._services[service_name] = service
             return service
 
         if service_name in self._types:
+            logger.debug(f"Resolving dependencies for type {service_name}")
             service = self._resolve_dependencies(self._types[service_name])
             # 缓存单例实例
             self._services[service_name] = service
             return service
 
+        logger.error(f"Service '{service_name}' not registered")
         raise ValueError(f"Service '{service_name}' not registered")
 
     def resolve(self, cls: Type) -> Any:

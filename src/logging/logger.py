@@ -79,6 +79,10 @@ class Logger:
                     'mode': 'a'
                 }
             },
+            'root': {
+                'level': 'DEBUG',
+                'handlers': ['console', 'file']
+            },
             'loggers': {
                 'scriptrunner': {
                     'level': 'DEBUG',
