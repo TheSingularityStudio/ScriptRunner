@@ -1,7 +1,11 @@
 import sys
 import os
 from typing import Tuple
-from ..parser.parser import ScriptParser
+
+# Add src directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from domain.parser.parser import ScriptParser
 
 def check_syntax(file_path: str) -> Tuple[bool, str]:
     """

@@ -4,7 +4,7 @@ ScriptRunner 的动作执行器。
 """
 
 from typing import Dict, Any, Optional
-from ..infrastructure.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

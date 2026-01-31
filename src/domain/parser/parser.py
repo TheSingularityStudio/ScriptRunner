@@ -1,9 +1,16 @@
+"""
+ScriptRunner 脚本解析器，支持DSL语法和传统格式。
+"""
+
 import yaml
 import os
 from typing import Dict, Any, List, Optional
 import re
 from .interfaces import IScriptParser
-from ...infrastructure.logger import get_logger
+try:
+    from ...infrastructure.logger import get_logger
+except ImportError:
+    from infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

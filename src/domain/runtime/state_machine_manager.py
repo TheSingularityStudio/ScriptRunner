@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Optional
 import time
 from .interfaces import IStateMachineManager
 from ...infrastructure.logger import get_logger
-from ...utils.action_executor import ActionExecutor
+from .action_executor import ActionExecutor
 
 logger = get_logger(__name__)
 
