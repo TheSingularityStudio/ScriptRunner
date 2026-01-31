@@ -5,7 +5,7 @@ from .effects_manager import EffectsManager
 from .state_machine_manager import StateMachineManager
 from .meta_manager import MetaManager
 from .random_manager import RandomManager
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

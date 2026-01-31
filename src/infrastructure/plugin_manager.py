@@ -7,8 +7,8 @@ import importlib
 import os
 from pathlib import Path
 from typing import Dict, List, Any, Type
-from .plugin_interface import PluginInterface
-from ..logging.logger import get_logger
+from plugin_interface import PluginInterface
+from logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -106,7 +106,7 @@ class PluginManager:
         """获取在初始化期间传递给插件的上下文。"""
         # 在此处导入以避免循环导入
         from .container import container
-        from ..config.config import config
+        from config import config
 
         return {
             'container': container,

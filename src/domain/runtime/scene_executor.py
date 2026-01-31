@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 import random
 import re
 from .interfaces import ISceneExecutor
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

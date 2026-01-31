@@ -5,7 +5,7 @@ ScriptRunner 的选择处理器。
 
 from typing import Optional, Dict, Any, List
 from .interfaces import IChoiceProcessor
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 

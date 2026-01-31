@@ -4,7 +4,7 @@ ScriptRunner 的输入处理器。
 """
 
 from typing import Dict, Any
-from ..logging.logger import get_logger
+from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
 
