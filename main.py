@@ -33,7 +33,7 @@ container.register('plugin_manager', plugin_manager)
 def main():
     # 设置日志配置
     setup_logging()
-    logger = get_logger(__name__)
+    logger = get_logger('scriptrunner')
 
     # 验证脚本文件路径
     if len(sys.argv) == 1:
@@ -68,12 +68,9 @@ def main():
 
         # 初始化渲染器
         try:
-            backend_factory = ui_manager.get_current_backend()
-            if callable(backend_factory):
-                renderer = backend_factory(execution_engine)
-                logger.info("Renderer initialized successfully")
-            else:
-                raise ConfigurationError("UI backend factory is not callable")
+            from src.ui.renderer import ConsoleRenderer
+            renderer = ConsoleRenderer(execution_engine)
+            logger.info("Renderer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize renderer: {e}")
             raise ConfigurationError(f"渲染器初始化失败: {e}")
@@ -108,6 +105,9 @@ def main():
         invalid_choice_count = 0
         max_invalid_choices = 5  # 限制无效选择次数
         while current_scene_id:
+            # 更新效果状态
+            execution_engine.effects_manager.update_effects()
+
             # 执行当前场景
             scene_data = execution_engine.execute_scene(current_scene_id)
 

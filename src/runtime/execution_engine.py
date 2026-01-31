@@ -1,5 +1,10 @@
 from typing import Dict, Any, List, Optional
 from .interfaces import IExecutionEngine, ISceneExecutor, ICommandExecutor, IConditionEvaluator, IChoiceProcessor, IInputHandler
+from .event_manager import EventManager
+from .effects_manager import EffectsManager
+from .state_machine_manager import StateMachineManager
+from .meta_manager import MetaManager
+from .random_manager import RandomManager
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
@@ -16,6 +21,16 @@ class ExecutionEngine(IExecutionEngine):
         self.condition_evaluator = condition_evaluator
         self.choice_processor = choice_processor
         self.input_handler = input_handler
+        self.event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        self.effects_manager = EffectsManager(parser, state_manager, command_executor)
+        self.state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
+        self.meta_manager = MetaManager(parser, state_manager, condition_evaluator)
+        self.random_manager = RandomManager(parser, state_manager)
+
+        # 加载状态机、元数据和随机表
+        self.state_machine_manager.load_state_machines()
+        self.meta_manager.load_meta_data()
+        self.random_manager.load_random_tables()
 
         logger.info("ExecutionEngine initialized with dependency injection")
 

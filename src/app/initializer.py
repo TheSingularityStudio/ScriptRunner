@@ -114,7 +114,12 @@ class ApplicationInitializer:
         condition_evaluator = self.container.get('condition_evaluator')
         choice_processor = self.container.get('choice_processor')
         input_handler = self.container.get('input_handler')
-        return ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler)
+        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler)
+
+        # 设置输入处理器的事件管理器引用
+        input_handler.event_manager = execution_engine.event_manager
+
+        return execution_engine
 
     def _register_ui_backends(self):
         """注册UI后端。"""

@@ -4,6 +4,8 @@ ScriptRunner 的场景执行器。
 """
 
 from typing import Dict, Any, Optional
+import random
+import re
 from .interfaces import ISceneExecutor
 from ..logging.logger import get_logger
 
@@ -28,6 +30,9 @@ class SceneExecutor(ISceneExecutor):
             raise ValueError(f"Scene '{scene_id}' not found")
 
         self.state.set_current_scene(scene_id)
+
+        # 初始化场景变量
+        self._initialize_scene_variables(scene)
 
         # 执行场景命令
         self.command_executor.execute_commands(scene.get('commands', []))
@@ -60,6 +65,28 @@ class SceneExecutor(ISceneExecutor):
 
         processed['choices'] = processed_choices
         return processed
+
+    def _initialize_scene_variables(self, scene: Dict[str, Any]):
+        """初始化场景变量，包括随机范围变量和列表随机选择。"""
+        variables = scene.get('variables', {})
+        for var_name, var_value in variables.items():
+            if isinstance(var_value, str):
+                # 检查是否是随机范围，如 "2-6"
+                range_match = re.match(r'^(\d+)-(\d+)$', var_value)
+                if range_match:
+                    min_val, max_val = map(int, range_match.groups())
+                    actual_value = random.randint(min_val, max_val)
+                    self.state.set_variable(var_name, actual_value)
+                else:
+                    # 直接设置为字符串值
+                    self.state.set_variable(var_name, var_value)
+            elif isinstance(var_value, list):
+                # 从列表中随机选择一个值
+                actual_value = random.choice(var_value)
+                self.state.set_variable(var_name, actual_value)
+            else:
+                # 其他类型直接设置
+                self.state.set_variable(var_name, var_value)
 
     def _replace_variables(self, text: str) -> str:
         """替换文本中的 DSL 变量。"""

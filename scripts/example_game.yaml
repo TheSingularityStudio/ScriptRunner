@@ -100,6 +100,10 @@ event_system:
 
 command_parser:
   verbs:
+    take:
+      patterns: ["拿起", "拿", "捡起", "拾取"]
+      requires: ["item"]
+      aliases: ["take", "pick", "get"]
     attack:
       patterns: ["攻击", "打击", "砍", "杀"]
       requires: ["target"]
