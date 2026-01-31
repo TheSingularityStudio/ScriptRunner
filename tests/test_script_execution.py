@@ -125,7 +125,7 @@ class TestScriptExecution:
 
         # 模拟选择第一个选项（进入森林）
         choice_index = 0
-        next_scene = execution_engine.process_choice(choice_index)
+        next_scene, messages = execution_engine.process_choice(choice_index)
 
         # 验证场景转换
         assert next_scene is not None

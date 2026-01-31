@@ -176,12 +176,17 @@ class RandomManager:
                 {'type': 'merchant', 'description': '一个商人向你走来。'},
                 {'type': 'beggar', 'description': '一个乞丐向你求助。'},
                 {'type': 'rumor', 'description': '你听到了一些传闻。'}
+            ],
+            'generic': [
+                {'type': 'random_event', 'description': '发生了一些随机事件。'}
             ]
         }
 
-        templates = event_templates.get(event_type, event_templates['generic'])
+        templates = event_templates.get(event_type)
         if templates:
             return random.choice(templates)
+        elif event_type == 'generic':
+            return random.choice(event_templates['generic'])
 
         return None
 
