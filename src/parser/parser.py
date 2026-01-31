@@ -2,8 +2,9 @@ import yaml
 import os
 from typing import Dict, Any, List, Optional
 import re
+from .interfaces import IScriptParser
 
-class ScriptParser:
+class ScriptParser(IScriptParser):
     def __init__(self):
         self.script_data = {}
         self.objects = {}  # DSL objects
@@ -36,28 +37,48 @@ class ScriptParser:
                 raise ValueError("DSL脚本必须包含'game'部分")
             if 'world' not in self.script_data:
                 raise ValueError("DSL脚本必须包含'world'部分")
+            # Check for start scene existence if world.start is specified and scenes/locations exist
+            if 'start' in self.script_data['world']:
+                start_scene = self.script_data['world']['start']
+                has_scenes = 'scenes' in self.script_data or 'locations' in self.script_data
+                if has_scenes:
+                    scene_exists = (
+                        ('scenes' in self.script_data and start_scene in self.script_data['scenes']) or
+                        ('locations' in self.script_data and start_scene in self.script_data['locations'])
+                    )
+                    if not scene_exists:
+                        raise ValueError(f"DSL脚本的起始场景'{start_scene}'在脚本中不存在")
+            # Validate define_object structures
+            if 'define_object' in self.script_data:
+                for obj_name, obj_def in self.script_data['define_object'].items():
+                    if not isinstance(obj_def, dict) or 'type' not in obj_def:
+                        raise ValueError(f"DSL对象'{obj_name}'必须是字典且包含'type'字段")
         else:
-            # Traditional validation
-            if 'scenes' not in self.script_data:
-                raise ValueError("传统脚本必须包含'scenes'部分")
-            for scene_id, scene in self.script_data['scenes'].items():
-                if 'text' not in scene:
-                    raise ValueError(f"场景'{scene_id}'必须有'text'字段")
+            # Traditional validation - support both 'scenes' and 'locations'
+            if 'scenes' not in self.script_data and 'locations' not in self.script_data:
+                raise ValueError("传统脚本必须包含'scenes'或'locations'部分")
+            scene_key = 'scenes' if 'scenes' in self.script_data else 'locations'
+            for scene_id, scene in self.script_data[scene_key].items():
+                if 'text' not in scene and 'description' not in scene:
+                    raise ValueError(f"场景'{scene_id}'必须有'text'或'description'字段")
 
     def _parse_dsl_structures(self):
         """解析DSL结构。"""
-        if 'define_object' in self.script_data:
-            self._parse_objects()
-        if 'event_system' in self.script_data:
-            self._parse_events()
-        if 'command_parser' in self.script_data:
-            self._parse_command_parser()
-        if 'random_system' in self.script_data:
-            self._parse_random_system()
-        if 'state_machines' in self.script_data:
-            self._parse_state_machines()
-        if 'effects' in self.script_data:
-            self._parse_effects()
+        try:
+            if 'define_object' in self.script_data:
+                self._parse_objects()
+            if 'event_system' in self.script_data:
+                self._parse_events()
+            if 'command_parser' in self.script_data:
+                self._parse_command_parser()
+            if 'random_system' in self.script_data:
+                self._parse_random_system()
+            if 'state_machines' in self.script_data:
+                self._parse_state_machines()
+            if 'effects' in self.script_data:
+                self._parse_effects()
+        except Exception as e:
+            raise ValueError(f"DSL结构解析失败: {str(e)}")
 
     def _parse_objects(self):
         """解析对象定义。"""
@@ -114,9 +135,21 @@ class ScriptParser:
         """获取随机表。"""
         return self.random_tables.get(table_name, {})
 
+    def get_random_table_data(self) -> Dict[str, Any]:
+        """获取所有随机表数据。"""
+        return self.script_data.get('random_system', {})
+
     def get_state_machine(self, sm_name: str) -> Dict[str, Any]:
         """获取状态机。"""
         return self.state_machines.get(sm_name, {})
+
+    def get_state_machine_data(self) -> Dict[str, Any]:
+        """获取所有状态机数据。"""
+        return self.state_machines
+
+    def get_meta_data(self) -> Dict[str, Any]:
+        """获取元数据。"""
+        return self.script_data.get('meta', {})
 
     def get_effect(self, effect_name: str) -> Dict[str, Any]:
         """获取效果定义。"""
@@ -138,7 +171,9 @@ class ScriptParser:
         action = None
         for verb, config in verbs.items():
             patterns = config.get('patterns', [])
-            for pattern in patterns:
+            aliases = config.get('aliases', [])
+            all_patterns = patterns + aliases
+            for pattern in all_patterns:
                 if pattern in input_text:
                     action = verb
                     break
@@ -148,15 +183,69 @@ class ScriptParser:
         if not action:
             return {'action': 'unknown', 'input': input_text}
 
-        # 提取目标（简单实现）
+        # 提取目标（改进实现）
         target = None
+
+        # 检查代词
+        pronouns = nouns.get('pronouns', {})
         for token in tokens:
-            if token in nouns.get('dynamic_match', {}):
-                target = token
+            if token in pronouns:
+                target = pronouns[token]
                 break
+
+        # 如果没有代词，尝试提取名词
+        if not target:
+            # 改进目标提取：移除动词后，提取剩余的连续文本作为目标
+            remaining_text = input_text.lower()
+            for verb_config in verbs.values():
+                for pattern in verb_config.get('patterns', []):
+                    remaining_text = re.sub(r'\b' + re.escape(pattern) + r'\b', '', remaining_text).strip()
+                for alias in verb_config.get('aliases', []):
+                    remaining_text = re.sub(r'\b' + re.escape(alias) + r'\b', '', remaining_text).strip()
+
+            # 移除多余空格
+            remaining_text = re.sub(r'\s+', ' ', remaining_text).strip()
+
+            if remaining_text and remaining_text != input_text.lower():
+                target = remaining_text
+            else:
+                # 如果没有剩余文本，尝试从原始输入中提取可能的名称
+                # 例如，从 "attack the goblin" 提取 "the goblin"
+                words = input_text.lower().split()
+                if len(words) > 1:
+                    # 假设动词后是目标
+                    target_start = -1
+                    for i, word in enumerate(words):
+                        for verb_config in verbs.values():
+                            if word in verb_config.get('patterns', []) or word in verb_config.get('aliases', []):
+                                target_start = i + 1
+                                break
+                        if target_start != -1:
+                            break
+                    if target_start != -1 and target_start < len(words):
+                        target = ' '.join(words[target_start:])
+
+        # 解析目标别名
+        if target:
+            target = self._resolve_target_alias(target)
 
         return {
             'action': action,
             'target': target,
             'original_input': input_text
         }
+
+    def _resolve_target_alias(self, target_text: str) -> str:
+        """解析目标的别名，返回标准名称。"""
+        # 检查对象别名
+        for obj_name, obj_def in self.objects.items():
+            aliases = obj_def.get('aliases', [])
+            if target_text in aliases or target_text == obj_def.get('name', ''):
+                return obj_name
+
+        return target_text
+
+    def get_effect(self, effect_name: str) -> Optional[Dict[str, Any]]:
+        """获取效果定义。"""
+        effects = self.script_data.get('effects', {})
+        return effects.get(effect_name)

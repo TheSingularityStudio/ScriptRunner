@@ -5,6 +5,7 @@ ScriptRunner 的配置管理。
 
 import yaml
 import os
+import threading
 from typing import Dict, Any, Optional
 from pathlib import Path
 
@@ -15,10 +16,31 @@ class Config:
     def __init__(self, config_file: Optional[str] = None):
         self._config: Dict[str, Any] = {}
         self._config_file = config_file or self._get_default_config_file()
+        self._lock = threading.RLock()  # 使用可重入锁
         self.load()
 
     def _get_default_config_file(self) -> str:
         """获取默认配置文件路径。"""
+        # 首先检查环境变量
+        env_config = os.environ.get('SCRIPTRUNNER_CONFIG')
+        if env_config:
+            return env_config
+
+        # 检查多个可能的路径
+        possible_paths = [
+            # 当前工作目录
+            'config.yaml',
+            # 用户配置目录
+            os.path.join(os.path.expanduser('~'), '.scriptrunner', 'config.yaml'),
+            # 项目根目录
+            os.path.join(os.path.dirname(__file__), '..', '..', 'config.yaml'),
+        ]
+
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+
+        # 返回默认路径（项目根目录）
         return os.path.join(os.path.dirname(__file__), '..', '..', 'config.yaml')
 
     def load(self):
@@ -54,16 +76,17 @@ class Config:
 
     def get(self, key: str, default=None):
         """通过键获取配置值（支持点号表示法）。"""
-        keys = key.split('.')
-        value = self._config
+        with self._lock:
+            keys = key.split('.')
+            value = self._config
 
-        for k in keys:
-            if isinstance(value, dict) and k in value:
-                value = value[k]
-            else:
-                return default
+            for k in keys:
+                if isinstance(value, dict) and k in value:
+                    value = value[k]
+                else:
+                    return default
 
-        return value
+            return value
 
     def set(self, key: str, value: Any):
         """通过键设置配置值（支持点号表示法）。"""
@@ -79,11 +102,12 @@ class Config:
 
     def save(self):
         """将当前配置保存到文件。"""
-        config_path = Path(self._config_file)
-        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._lock:
+            config_path = Path(self._config_file)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(config_path, 'w', encoding='utf-8') as f:
-            yaml.dump(self._config, f, default_flow_style=False, allow_unicode=True)
+            with open(config_path, 'w', encoding='utf-8') as f:
+                yaml.dump(self._config, f, default_flow_style=False, allow_unicode=True)
 
     def reload(self):
         """从文件重新加载配置。"""
@@ -94,5 +118,4 @@ class Config:
         return self._config.copy()
 
 
-# 全局配置实例
-config = Config()
+# 移除全局配置实例，由调用方创建和管理

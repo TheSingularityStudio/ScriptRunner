@@ -5,12 +5,13 @@ ScriptRunner 的条件评估器。
 
 from typing import Optional
 import re
+from .interfaces import IConditionEvaluator
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class ConditionEvaluator:
+class ConditionEvaluator(IConditionEvaluator):
     """评估选择和其他条件逻辑的条件。"""
 
     def __init__(self, state_manager):

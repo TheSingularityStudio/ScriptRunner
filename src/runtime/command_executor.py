@@ -5,12 +5,13 @@ ScriptRunner 的命令执行器。
 
 from typing import Dict, Any, List
 import random
+from .interfaces import ICommandExecutor
 from ..logging.logger import get_logger
 
 logger = get_logger(__name__)
 
 
-class CommandExecutor:
+class CommandExecutor(ICommandExecutor):
     """执行游戏脚本中的命令。"""
 
     def __init__(self, parser, state_manager, condition_evaluator):
@@ -22,6 +23,59 @@ class CommandExecutor:
         """执行命令列表。"""
         for command in commands:
             self.execute_command(command)
+
+    def execute_command(self, command: Dict[str, Any]) -> None:
+        """执行单个命令。"""
+        if 'set' in command:
+            # 设置变量
+            var_expr = command['set']
+            if '=' in var_expr:
+                var_name, value_str = var_expr.split('=', 1)
+                var_name = var_name.strip()
+                value_str = value_str.strip()
+
+                # 尝试解析值
+                try:
+                    # 检查是否是数字
+                    if value_str.isdigit() or (value_str.startswith('-') and value_str[1:].isdigit()):
+                        value = int(value_str)
+                    elif value_str.replace('.', '').isdigit() or (value_str.startswith('-') and value_str[1:].replace('.', '').isdigit()):
+                        value = float(value_str)
+                    elif value_str.lower() in ['true', 'false']:
+                        value = value_str.lower() == 'true'
+                    else:
+                        # 移除引号
+                        value = value_str.strip('"\'')
+
+                    self.state.set_variable(var_name, value)
+                    logger.debug(f"Set variable {var_name} = {value}")
+                except ValueError as e:
+                    logger.error(f"Failed to parse value '{value_str}' for variable {var_name}: {e}")
+            else:
+                logger.error(f"Invalid set command format: {var_expr}")
+
+        elif 'add_flag' in command:
+            # 添加标志
+            flag = command['add_flag']
+            self.state.set_flag(flag)
+            logger.debug(f"Added flag: {flag}")
+
+        elif 'remove_flag' in command:
+            # 移除标志
+            flag = command['remove_flag']
+            self.state.clear_flag(flag)
+            logger.debug(f"Removed flag: {flag}")
+
+        elif 'apply_effect' in command:
+            # 应用效果
+            effect_name = command['apply_effect']
+            # 这里需要访问效果管理器，但目前command_executor没有直接访问
+            # 可以通过execution_engine来访问，或者在初始化时传入
+            logger.debug(f"Apply effect command: {effect_name}")
+            # 暂时记录，稍后在场景执行器中处理
+
+        else:
+            logger.warning(f"Unknown command: {command}")
 
     def execute_command(self, command: Dict[str, Any]) -> None:
         """执行单个命令。"""
@@ -37,7 +91,9 @@ class CommandExecutor:
         try:
             if command_type == 'set':
                 self._execute_set(command_value)
-            elif command_type == 'set_flag':
+            elif command_type == 'set_variable':
+                self._execute_set_variable(command_value)
+            elif command_type == 'set_flag' or command_type == 'add_flag':
                 self.state.set_flag(command_value)
             elif command_type == 'clear_flag':
                 self.state.clear_flag(command_value)
@@ -112,6 +168,14 @@ class CommandExecutor:
 
         self.state.apply_effect(effect_name, effect)
         logger.debug(f"Applied effect: {effect_name}")
+
+    def _execute_set_variable(self, command_value: Dict[str, Any]) -> None:
+        """执行设置变量命令。"""
+        name = command_value.get('name')
+        value = command_value.get('value')
+        if name is not None and value is not None:
+            self.state.set_variable(name, value)
+            logger.debug(f"Set variable {name} = {value}")
 
     def _execute_if(self, command: Dict[str, Any]) -> None:
         """执行条件命令。"""
