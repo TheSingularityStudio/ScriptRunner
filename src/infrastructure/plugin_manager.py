@@ -105,7 +105,7 @@ class PluginManager:
     def _get_plugin_context(self) -> Dict[str, Any]:
         """获取在初始化期间传递给插件的上下文。"""
         # 在此处导入以避免循环导入
-        from ..di.container import container
+        from .container import container
         from ..config.config import config
 
         return {

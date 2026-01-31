@@ -8,7 +8,7 @@ import sys
 import os
 from src.di.container import Container
 from src.logging.logger import setup_logging, get_logger
-from src.config.config import Config
+from src.application.config import Config
 from src.ui.ui_interface import UIManager
 from src.plugins.plugin_manager import PluginManager
 from src.utils.exceptions import GameError, ScriptError, ConfigurationError
@@ -16,7 +16,7 @@ from src.parser.parser import ScriptParser
 from src.state.state_manager import StateManager
 from src.runtime.execution_engine import ExecutionEngine
 from src.ui.renderer import ConsoleRenderer
-from src.app.initializer import ApplicationInitializer
+from src.application.initializer import ApplicationInitializer
 
 # 创建 DI 容器
 container = Container()
@@ -68,7 +68,7 @@ def main():
 
         # 初始化渲染器
         try:
-            from src.ui.renderer import ConsoleRenderer
+            from src.presentation.ui.renderer import ConsoleRenderer
             renderer = ConsoleRenderer(execution_engine)
             logger.info("Renderer initialized successfully")
         except Exception as e:
