@@ -13,17 +13,29 @@ player:
     health: 100
     gold: 50
     reputation: 0
+    defense: 7
   skills:
     - name: "swordsmanship"
       base_attribute: "strength"
+      level: 1
+      damage_bonus: 2
     - name: "stealth"
       base_attribute: "agility"
+      level: 1
+      success_bonus: 0.1
+  inventory:
+    capacity: 20
+    items: []
 
 define_object:
   goblin:
     type: "creature"
     name: "哥布林"
     aliases: ["绿皮", "小怪物"]
+    attributes:
+      strength: 8
+      defense: 5
+      agility: 10
     states:
       - name: "health"
         value: 30
@@ -34,8 +46,11 @@ define_object:
         type: "boolean"
     behaviors:
       attack:
-        success: "你击中了{target}"
+        damage: "strength + random(1, 6)"
+        hit_chance: "0.7 + (agility - player.agility) * 0.05"
+        success: "你击中了{target}，造成{damage}点伤害！"
         failure: "你没能打中{target}"
+        counter: "哥布林反击了你！"
       talk:
         responses:
           - "滚开，人类！"
@@ -79,6 +94,16 @@ define_object:
         weight: 30
       - item: "dagger"
         weight: 20
+
+  werewolf_loot:
+    type: "loot_table"
+    entries:
+      - item: "silver_fang"
+        weight: 40
+      - item: "wolf_pelt"
+        weight: 35
+      - item: "gold_coin"
+        weight: 25
 
 event_system:
   scheduled_events:
@@ -179,6 +204,16 @@ random_system:
       variables:
         greeting: ["你好", "欢迎", "嘿"]
         quest_hint: ["最近森林不太平", "我听说有个宝藏", "小心那些哥布林"]
+    village_events:
+      type: "weighted"
+      entries:
+        - value: "merchant_arrival"
+          weight: 30
+          condition: "time_of_day = 'day'"
+        - value: "rumor_spread"
+          weight: 20
+        - value: "weather_change"
+          weight: 50
   procedural:
     dungeon_room:
       algorithm: "cellular_automata"
@@ -195,6 +230,21 @@ random_system:
       reactions:
         - when: "player.action = 'give_gift'"
           effect: "friendliness += gift.value / 10"
+        - when: "player.action = 'insult'"
+          effect: "friendliness -= 2"
+    quest_generation:
+      algorithm: "template_based"
+      templates:
+        - type: "fetch"
+          template: "从{location}获取{item}并带回给{npc}"
+        - type: "kill"
+          template: "击败{count}个{monster}并带回证明"
+      parameters:
+        location: ["森林", "村庄", "洞穴"]
+        item: ["药草", "宝藏", "武器"]
+        npc: ["铁匠", "旅馆老板", "村民"]
+        monster: ["哥布林", "狼人", "野兽"]
+        count: "1-5"
 
 state_machines:
   day_night_cycle:
@@ -282,18 +332,33 @@ locations:
       你走在森林小路上。
       周围是茂密的树木，远处传来鸟儿的叫声。
       你看到前方有一个哥布林！
+      {werewolf_description}
+    variables:
+      werewolf_description: ["", "远处传来低沉的狼嚎声...", "你隐约看到树影中闪过一对绿色的眼睛。"]
     objects:
       - ref: "goblin"
         count: "1-3"
         spawn_condition: "!player.stealth"
+      - ref: "werewolf"
+        count: "0-1"
+        spawn_condition: "world.moon_phase = 'full' and random_chance(0.2)"
     choices:
       - text: "攻击哥布林"
         next: "forest_path"
         commands:
           - attack: "goblin"
+      - text: "攻击狼人"
+        next: "forest_path"
+        commands:
+          - attack: "werewolf"
+        condition: "werewolf.present"
       - text: "偷偷溜走"
         next: "village_square"
         condition: "agility > 10"
+      - text: "搜索周围"
+        next: "forest_path"
+        commands:
+          - search: "forest_path"
 
   chest_opened:
     description: |

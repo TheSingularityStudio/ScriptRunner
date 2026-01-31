@@ -73,8 +73,9 @@ class ApplicationInitializer:
 
     def _create_condition_evaluator(self):
         """创建条件评估器的工厂函数。"""
+        parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
-        return ConditionEvaluator(state_manager)
+        return ConditionEvaluator(state_manager, parser)
 
     def _create_command_executor(self):
         """创建命令执行器的工厂函数。"""

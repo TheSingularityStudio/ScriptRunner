@@ -14,8 +14,9 @@ logger = get_logger(__name__)
 class ConditionEvaluator(IConditionEvaluator):
     """评估选择和其他条件逻辑的条件。"""
 
-    def __init__(self, state_manager):
+    def __init__(self, state_manager, parser=None):
         self.state = state_manager
+        self.parser = parser
 
     def evaluate_condition(self, condition: Optional[str]) -> bool:
         """评估条件字符串。"""
@@ -80,6 +81,13 @@ class ConditionEvaluator(IConditionEvaluator):
             var_name = condition[7:].strip()
             return var_name in self.state.variables
 
+        # 对象状态检查 (dot notation)
+        elif '.' in condition:
+            parts = condition.split('.', 1)
+            if len(parts) == 2:
+                obj_name, state_name = parts
+                return self._check_object_state(obj_name.strip(), state_name.strip())
+
         # 对于复杂条件默认设置为真
         logger.warning(f"Complex condition not fully supported: {condition}")
         return True
@@ -90,3 +98,42 @@ class ConditionEvaluator(IConditionEvaluator):
         if expression in self.state.variables:
             return self.state.variables[expression]
         return expression
+
+    def _check_object_state(self, obj_name: str, state_name: str) -> bool:
+        """检查对象是否具有指定的状态。"""
+        if not self.parser:
+            logger.warning(f"Parser not available for object state check: {obj_name}.{state_name}")
+            return False
+
+        # 获取当前场景
+        current_scene_id = self.state.get_current_scene()
+        if not current_scene_id:
+            return False
+
+        scene_data = self.parser.get_scene(current_scene_id)
+        if not scene_data:
+            return False
+
+        # 检查场景中的对象
+        objects = scene_data.get('objects', [])
+        for obj in objects:
+            if isinstance(obj, dict) and obj.get('ref') == obj_name:
+                # 检查生成条件
+                spawn_condition = obj.get('spawn_condition')
+                if spawn_condition and not self.evaluate_condition(spawn_condition):
+                    continue  # 对象未生成
+
+                # 如果状态是'present'，表示对象存在
+                if state_name == 'present':
+                    return True
+
+                # 检查对象的状态
+                obj_def = self.parser.get_object(obj_name)
+                if obj_def:
+                    states = obj_def.get('states', [])
+                    for state in states:
+                        if state.get('name') == state_name:
+                            value = state.get('value', False)
+                            return bool(value)
+
+        return False

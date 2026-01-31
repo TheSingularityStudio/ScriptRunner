@@ -33,7 +33,7 @@ class TestComprehensiveScriptExecution:
         # 初始化所有组件
         self.parser = ScriptParser()
         self.state_manager = StateManager()
-        self.condition_evaluator = ConditionEvaluator(self.state_manager)
+        self.condition_evaluator = ConditionEvaluator(self.state_manager, self.parser)
         self.command_executor = CommandExecutor(self.parser, self.state_manager, self.condition_evaluator)
         self.scene_executor = SceneExecutor(self.parser, self.state_manager, self.command_executor, self.condition_evaluator)
 

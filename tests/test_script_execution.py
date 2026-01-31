@@ -99,7 +99,7 @@ class TestScriptExecution:
         """测试 example_game.yaml 脚本的场景转换。"""
         parser = ScriptParser()
         state_manager = StateManager()
-        condition_evaluator = ConditionEvaluator(state_manager)
+        condition_evaluator = ConditionEvaluator(state_manager, parser)
         command_executor = CommandExecutor(parser, state_manager, condition_evaluator)
         scene_executor = SceneExecutor(parser, state_manager, command_executor, condition_evaluator)
 

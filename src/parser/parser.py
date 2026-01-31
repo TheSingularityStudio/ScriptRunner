@@ -99,7 +99,10 @@ class ScriptParser(IScriptParser):
     def _parse_objects(self):
         """解析对象定义。"""
         for obj_name, obj_def in self.script_data['define_object'].items():
-            self.objects[obj_name] = obj_def
+            if obj_def.get('type') == 'loot_table':
+                self.random_tables[obj_name] = obj_def
+            else:
+                self.objects[obj_name] = obj_def
 
     def _parse_events(self):
         """解析事件系统。"""
@@ -111,7 +114,9 @@ class ScriptParser(IScriptParser):
 
     def _parse_random_system(self):
         """解析随机系统。"""
-        self.random_tables = self.script_data['random_system'].get('tables', {})
+        # 合并随机表，不要覆盖从define_object中解析的战利品表
+        new_tables = self.script_data['random_system'].get('tables', {})
+        self.random_tables.update(new_tables)
 
     def _parse_state_machines(self):
         """解析状态机。"""

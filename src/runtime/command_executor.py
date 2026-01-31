@@ -56,6 +56,8 @@ class CommandExecutor(ICommandExecutor):
                 self._execute_if(command)
             elif command_type == 'attack':
                 self._execute_attack(command_value)
+            elif command_type == 'search':
+                self._execute_search(command_value)
             else:
                 logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:
@@ -170,3 +172,13 @@ class CommandExecutor(ICommandExecutor):
         if new_health <= 0:
             logger.info(f"{target} has been defeated!")
             # 可以触发死亡事件或移除对象
+
+    def _execute_search(self, location: str) -> None:
+        """执行搜索命令。"""
+        logger.info(f"Searching {location}...")
+
+        # 尝试滚动森林战利品表（如果适用）
+        if location == 'forest_path':
+            self._execute_roll_table('forest_loot')
+        else:
+            logger.info(f"No items found while searching {location}.")
