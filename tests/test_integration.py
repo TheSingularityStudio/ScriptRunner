@@ -7,15 +7,15 @@ import tempfile
 import os
 import yaml
 from unittest.mock import Mock, patch
-from src.di.container import Container
-from src.parser.parser import ScriptParser
-from src.state.state_manager import StateManager
-from src.runtime.execution_engine import ExecutionEngine
-from src.runtime.scene_executor import SceneExecutor
-from src.runtime.command_executor import CommandExecutor
-from src.runtime.condition_evaluator import ConditionEvaluator
-from src.runtime.choice_processor import ChoiceProcessor
-from src.runtime.input_handler import InputHandler
+from src.infrastructure.container import Container
+from src.domain.parser.parser import ScriptParser
+from src.infrastructure.state_manager import StateManager
+from src.domain.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.scene_executor import SceneExecutor
+from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.condition_evaluator import ConditionEvaluator
+from src.domain.runtime.choice_processor import ChoiceProcessor
+from src.domain.runtime.input_handler import InputHandler
 
 
 class TestIntegration:
@@ -64,9 +64,24 @@ class TestIntegration:
             choice_processor = Mock()
             input_handler = Mock()
 
+            # Initialize managers
+            from src.domain.runtime.effects_manager import EffectsManager
+            from src.domain.runtime.event_manager import EventManager
+            from src.domain.runtime.random_manager import RandomManager
+            from src.domain.runtime.state_machine_manager import StateMachineManager
+            from src.domain.runtime.meta_manager import MetaManager
+
+            effects_manager = EffectsManager(parser, state_manager, command_executor)
+            event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+            random_manager = RandomManager(parser, state_manager)
+            state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
+            meta_manager = MetaManager(parser, state_manager, condition_evaluator)
+
             execution_engine = ExecutionEngine(
                 parser, state_manager, scene_executor, command_executor,
-                condition_evaluator, choice_processor, input_handler
+                condition_evaluator, choice_processor, input_handler,
+                event_manager, effects_manager, state_machine_manager,
+                meta_manager, random_manager
             )
 
             # 加载脚本

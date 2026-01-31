@@ -1,241 +1,256 @@
-# ScriptRunner Architecture Documentation
+# ScriptRunner 架构文档
 
-## Overview
+## 概述
 
-ScriptRunner is a text-based game engine that has been refactored to follow modern software architecture principles. The system supports running games defined in YAML scripts with DSL (Domain Specific Language) extensions.
+ScriptRunner 是一个专为文字游戏设计的脚本运行器。它允许开发者使用 YAML 格式编写游戏脚本，支持自定义 DSL（领域特定语言）语法，并通过控制台界面运行游戏。系统采用分层架构设计，确保代码的可维护性、可扩展性和可测试性。
 
-## Core Architecture Principles
+### 主要功能
 
-- **Dependency Injection**: Components are loosely coupled using a DI container
-- **Single Responsibility**: Each class has a focused, single purpose
-- **Plugin Architecture**: Extensible through plugins
-- **Modular Design**: Components can be easily replaced or extended
-- **Testability**: Comprehensive unit test coverage
+- **脚本解析**: 支持传统 YAML 格式和自定义 DSL 语法
+- **游戏执行**: 协调各种运行时组件执行游戏逻辑
+- **状态管理**: 维护游戏状态、玩家属性和效果
+- **事件系统**: 支持定时事件和反应事件
+- **效果系统**: 管理游戏效果和状态修正
+- **随机系统**: 提供骰子投掷和随机表功能
+- **控制台界面**: 简单的文本界面用于游戏交互
 
-## Component Architecture
+## 架构原则
 
-### 1. Dependency Injection Container (`src/di/container.py`)
+ScriptRunner 遵循以下架构原则：
 
-A simple service locator pattern implementation that manages component dependencies.
+### 1. 分层架构 (Layered Architecture)
 
-**Key Features:**
-- Service registration and resolution
-- Factory function support
-- Singleton instance caching
+系统分为四个主要层级，每个层级有明确的职责：
 
-### 2. Logging System (`src/logging/logger.py`)
+- **领域层 (Domain)**: 核心业务逻辑和规则
+- **应用层 (Application)**: 用例协调和应用逻辑
+- **基础设施层 (Infrastructure)**: 外部依赖和技术实现
+- **表示层 (Presentation)**: 用户界面和输入输出
 
-Centralized logging configuration using Python's built-in logging module.
+### 2. 依赖倒置原则 (Dependency Inversion)
 
-**Key Features:**
-- Configurable log levels and handlers
-- File and console output
-- Structured logging
+高层模块不依赖低层模块，都依赖抽象接口。通过依赖注入容器实现解耦。
 
-### 3. Configuration Management (`src/config/config.py`)
+### 3. 接口抽象 (Interface Abstraction)
 
-YAML-based configuration system for application settings.
+所有核心组件都通过抽象接口定义，确保实现的可替换性和可测试性。
 
-**Key Features:**
-- Dot notation access (e.g., `config.get('logging.level')`)
-- Default configuration values
-- Runtime configuration updates
+### 4. 单一职责原则 (Single Responsibility)
 
-### 4. Plugin System (`src/plugins/`)
+每个类和模块都有明确的单一职责，便于维护和扩展。
 
-Extensible plugin architecture for adding custom functionality.
+## 架构层级详解
 
-**Plugin Types:**
-- `CommandPlugin`: Custom game commands
-- `UIPlugin`: Custom UI backends
-- `ParserPlugin`: Parser extensions
-- `EventPlugin`: Event handling
-- `StoragePlugin`: Custom storage backends
+### 领域层 (Domain Layer)
 
-### 5. UI Abstraction (`src/ui/`)
+**位置**: `src/domain/`
 
-Multiple UI backend support with a common interface.
+**职责**: 包含核心业务逻辑、实体和业务规则。
 
-**Current Backends:**
-- Console UI (`ConsoleRenderer`)
+**主要组件**:
 
-**Interface Methods:**
-- `render_scene()`: Display scene content
-- `get_player_choice()`: Get user input
-- `show_message()`: Display messages
-- `clear_screen()`: Clear display
-- `render_status()`: Show player status
+- **Parser** (`src/domain/parser/`): 脚本解析器
+  - 支持 YAML 格式解析
+  - DSL 语法解析
+  - 脚本结构验证
 
-### 6. Execution Engine (`src/runtime/`)
+- **Runtime** (`src/domain/runtime/`): 运行时组件
+  - `ExecutionEngine`: 执行引擎，协调各组件
+  - `SceneExecutor`: 场景执行器
+  - `CommandExecutor`: 命令执行器
+  - `ConditionEvaluator`: 条件评估器
+  - `ChoiceProcessor`: 选择处理器
+  - `InputHandler`: 输入处理器
+  - `EventManager`: 事件管理器
+  - `EffectsManager`: 效果管理器
+  - `StateMachineManager`: 状态机管理器
+  - `MetaManager`: 元数据管理器
+  - `RandomManager`: 随机管理器
 
-Refactored from a monolithic class into specialized components:
+### 应用层 (Application Layer)
 
-- **SceneExecutor**: Handles scene execution and variable replacement
-- **CommandExecutor**: Processes game commands and effects
-- **ConditionEvaluator**: Evaluates conditional logic
-- **ChoiceProcessor**: Manages player choices and navigation
-- **InputHandler**: Processes natural language input
+**位置**: `src/application/`
 
-### 7. State Management (`src/state/state_manager.py`)
+**职责**: 协调领域对象执行应用用例。
 
-Enhanced with caching and performance optimizations.
+**主要组件**:
 
-**Features:**
-- Variable and flag management
-- Effect system with duration tracking
-- Save/load functionality
-- Performance caching
-- Auto-save capabilities
+- **GameRunner**: 游戏运行器
+  - 初始化应用组件
+  - 加载游戏脚本
+  - 初始化玩家
+  - 运行游戏主循环
 
-### 8. Error Handling (`src/utils/exceptions.py`)
+- **ApplicationInitializer**: 应用初始化器
+  - 配置依赖注入容器
+  - 注册服务和组件
 
-Custom exception hierarchy for better error categorization.
+### 基础设施层 (Infrastructure Layer)
 
-**Exception Types:**
-- `GameError`: Game-related errors
-- `ScriptError`: Script parsing errors
-- `ConfigurationError`: Configuration issues
-- `PluginError`: Plugin loading/execution errors
-- `ExecutionError`: Runtime execution errors
-- `UIError`: UI-related errors
+**位置**: `src/infrastructure/`
 
-## Application Flow
+**职责**: 处理外部依赖、技术框架和基础设施服务。
 
-1. **Initialization** (`main.py`):
-   - Setup logging and configuration
-   - Initialize DI container
-   - Register core services
-   - Load plugins
-   - Setup UI backend
+**主要组件**:
 
-2. **Game Loading**:
-   - Parse YAML script
-   - Initialize player state
-   - Set starting scene
+- **Container**: 依赖注入容器
+  - 服务注册和解析
+  - 构造函数注入支持
+  - 工厂方法和类型注册
 
-3. **Game Loop**:
-   - Execute current scene
-   - Render scene content
-   - Process player input
-   - Navigate to next scene
+- **Logger**: 日志系统
+  - 结构化日志记录
+  - 多级别日志支持
 
-## Testing
+- **StateManager**: 状态管理器
+  - 游戏状态持久化
+  - 变量和属性管理
+  - 效果状态跟踪
 
-Comprehensive unit test suite using pytest:
+- **PluginManager**: 插件管理器
+  - 插件加载和卸载
+  - 扩展点管理
 
-- `tests/test_state_manager.py`: State management tests
-- Additional test files for other components
+### 表示层 (Presentation Layer)
 
-**Test Coverage Areas:**
-- Component initialization
-- Core functionality
-- Error conditions
-- Save/load operations
-- Plugin integration
+**位置**: `src/presentation/`
 
-## Configuration
+**职责**: 处理用户界面和输入输出。
 
-Default configuration (`config.yaml`):
+**主要组件**:
 
-```yaml
-logging:
-  level: INFO
-  file: scriptrunner.log
+- **Renderer**: 渲染器
+  - 场景渲染
+  - 选择显示
+  - 状态信息展示
+  - 控制台界面管理
 
-game:
-  save_file: game_save.json
-  auto_save: true
+- **UI Interface**: UI 后端接口
+  - 抽象界面定义
+  - 支持不同 UI 实现
 
-ui:
-  type: console
-  clear_screen: true
+### 工具层 (Utils Layer)
 
-plugins:
-  enabled: []
-  directory: plugins
+**位置**: `src/utils/`
+
+**职责**: 提供通用工具和辅助功能。
+
+**主要组件**:
+
+- **Exceptions**: 自定义异常类
+- **SyntaxChecker**: 语法检查器
+
+## 核心组件交互
+
+### 数据流图
+
+```
+脚本文件 (YAML)
+    ↓
+Parser (解析)
+    ↓
+GameRunner (初始化)
+    ↓
+ExecutionEngine (协调执行)
+    ↙        ↘
+SceneExecutor  ChoiceProcessor
+    ↓           ↓
+Renderer ←──── InputHandler
+    ↑           ↑
+控制台输出 ← 玩家输入
 ```
 
-## Plugin Development
+### 依赖注入
 
-### Creating a Custom Command Plugin
+系统使用依赖注入容器管理组件依赖：
 
 ```python
-from src.plugins.plugin_interface import CommandPlugin
-
-class MyCommands(CommandPlugin):
-    @property
-    def name(self):
-        return "my_commands"
-
-    @property
-    def version(self):
-        return "1.0.0"
-
-    def get_commands(self):
-        return {
-            "custom_action": {
-                "description": "A custom game action",
-                "parameters": ["target"]
-            }
-        }
-
-    def execute_command(self, command_name, args):
-        if command_name == "custom_action":
-            # Implement custom logic
-            pass
+# 示例：ExecutionEngine 的依赖注入
+execution_engine = ExecutionEngine(
+    parser=parser,
+    state_manager=state_manager,
+    scene_executor=scene_executor,
+    command_executor=command_executor,
+    # ... 其他依赖
+)
 ```
 
-### Creating a Custom UI Backend
+## 技术栈
 
-```python
-from src.ui.ui_interface import UIBackend
+- **编程语言**: Python 3.7+
+- **脚本格式**: YAML
+- **架构模式**: 分层架构 + 依赖注入
+- **设计模式**: 抽象工厂、策略模式、观察者模式
+- **用户界面**: 控制台 (Console)
+- **日志系统**: Python logging
+- **配置管理**: YAML 配置文件
 
-class WebUIRenderer(UIBackend):
-    def render_scene(self, scene_data):
-        # Implement web-based rendering
-        pass
+## 部署和使用
 
-    def get_player_choice(self):
-        # Implement web input handling
-        pass
+### 系统要求
+
+- Python 3.7 或更高版本
+- 支持的操作系统: Windows, macOS, Linux
+
+### 安装
+
+```bash
+pip install -r requirements.txt
 ```
 
-## Performance Optimizations
+### 运行游戏
 
-- **Caching**: StateManager includes result caching
-- **Lazy Loading**: Components loaded on demand
-- **Efficient Data Structures**: Optimized for game state operations
-- **Modular Execution**: Reduced coupling improves performance
+```bash
+python main.py [脚本文件路径]
+```
 
-## Migration Guide
+如果不指定脚本文件，将使用默认脚本 `scripts/example_game.yaml`。
 
-For existing ScriptRunner installations:
+### 脚本开发
 
-1. Update `main.py` to use new initialization pattern
-2. Replace direct component instantiation with DI container
-3. Update custom scripts to use new exception types
-4. Migrate configuration to new YAML format
-5. Test with existing game scripts
+游戏脚本使用 YAML 格式，支持两种模式：
 
-## API Reference
+1. **传统格式**: 简单的场景-选择结构
+2. **DSL 格式**: 高级语法，支持对象定义、事件系统、状态机等
 
-### Core Classes
+详细语法请参考 `docs/syntax_manual.md`。
 
-- `Container`: Dependency injection container
-- `Logger`: Logging utilities
-- `Config`: Configuration management
-- `PluginManager`: Plugin lifecycle management
-- `ExecutionEngine`: Game execution coordination
-- `StateManager`: Game state management
-- `ScriptParser`: YAML/DSL script parsing
+## 扩展性
 
-### Key Methods
+### 添加新组件
 
-- `Container.get()`: Resolve service instances
-- `Logger.get_logger()`: Get named logger
-- `Config.get()`: Retrieve configuration values
-- `PluginManager.load_plugins()`: Load available plugins
-- `ExecutionEngine.execute_scene()`: Run game scene
-- `StateManager.save_game()`: Persist game state
+1. 在 `src/domain/runtime/interfaces.py` 中定义接口
+2. 在相应层级实现具体类
+3. 通过依赖注入容器注册
+4. 在初始化器中配置依赖关系
 
-This architecture provides a solid foundation for extending ScriptRunner with new features while maintaining code quality and testability.
+### 插件系统
+
+系统支持插件扩展：
+
+- 在 `plugins/` 目录放置插件
+- 实现 `PluginInterface`
+- 通过 `PluginManager` 加载
+
+### UI 扩展
+
+表示层抽象设计允许添加新的 UI 后端：
+
+- 实现 `UIBackend` 接口
+- 在容器中注册新的渲染器
+
+## 测试策略
+
+- **单元测试**: `tests/` 目录下的各个组件测试
+- **集成测试**: 端到端脚本执行测试
+- **测试覆盖**: 核心业务逻辑 80%+ 覆盖率
+
+## 性能考虑
+
+- **内存管理**: 状态管理器优化内存使用
+- **执行效率**: 条件评估和命令执行优化
+- **可扩展性**: 组件化设计支持水平扩展
+
+## 总结
+
+ScriptRunner 的架构设计注重可维护性、可扩展性和可测试性。通过分层架构和依赖注入，系统实现了高度的解耦和灵活性。DSL 语法支持使得脚本编写更加直观和强大，为文字游戏开发提供了坚实的技术基础。

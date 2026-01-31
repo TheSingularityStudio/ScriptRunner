@@ -5,14 +5,14 @@ Integration tests for script execution, specifically testing if scripts/example_
 import pytest
 import os
 from unittest.mock import Mock
-from src.parser.parser import ScriptParser
-from src.state.state_manager import StateManager
-from src.runtime.execution_engine import ExecutionEngine
-from src.runtime.scene_executor import SceneExecutor
-from src.runtime.command_executor import CommandExecutor
-from src.runtime.condition_evaluator import ConditionEvaluator
-from src.runtime.choice_processor import ChoiceProcessor
-from src.runtime.input_handler import InputHandler
+from src.domain.parser.parser import ScriptParser
+from src.infrastructure.state_manager import StateManager
+from src.domain.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.scene_executor import SceneExecutor
+from src.domain.runtime.command_executor import CommandExecutor
+from src.domain.runtime.condition_evaluator import ConditionEvaluator
+from src.domain.runtime.choice_processor import ChoiceProcessor
+from src.domain.runtime.input_handler import InputHandler
 
 
 class TestScriptExecution:
@@ -62,9 +62,24 @@ class TestScriptExecution:
         choice_processor = Mock()
         input_handler = Mock()
 
+        # Initialize managers
+        from src.domain.runtime.effects_manager import EffectsManager
+        from src.domain.runtime.event_manager import EventManager
+        from src.domain.runtime.random_manager import RandomManager
+        from src.domain.runtime.state_machine_manager import StateMachineManager
+        from src.domain.runtime.meta_manager import MetaManager
+
+        effects_manager = EffectsManager(parser, state_manager, command_executor)
+        event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        random_manager = RandomManager(parser, state_manager)
+        state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
+        meta_manager = MetaManager(parser, state_manager, condition_evaluator)
+
         execution_engine = ExecutionEngine(
             parser, state_manager, scene_executor, command_executor,
-            condition_evaluator, choice_processor, input_handler
+            condition_evaluator, choice_processor, input_handler,
+            event_manager, effects_manager, state_machine_manager,
+            meta_manager, random_manager
         )
 
         # 加载脚本
@@ -99,16 +114,31 @@ class TestScriptExecution:
         """测试 example_game.yaml 脚本的场景转换。"""
         parser = ScriptParser()
         state_manager = StateManager()
-        condition_evaluator = ConditionEvaluator(state_manager)
+        condition_evaluator = ConditionEvaluator(state_manager, parser)
         command_executor = CommandExecutor(parser, state_manager, condition_evaluator)
         scene_executor = SceneExecutor(parser, state_manager, command_executor, condition_evaluator)
 
         choice_processor = ChoiceProcessor(parser, state_manager, command_executor)
         input_handler = Mock()
 
+        # Initialize managers
+        from src.domain.runtime.effects_manager import EffectsManager
+        from src.domain.runtime.event_manager import EventManager
+        from src.domain.runtime.random_manager import RandomManager
+        from src.domain.runtime.state_machine_manager import StateMachineManager
+        from src.domain.runtime.meta_manager import MetaManager
+
+        effects_manager = EffectsManager(parser, state_manager, command_executor)
+        event_manager = EventManager(parser, state_manager, command_executor, condition_evaluator)
+        random_manager = RandomManager(parser, state_manager)
+        state_machine_manager = StateMachineManager(parser, state_manager, command_executor, condition_evaluator)
+        meta_manager = MetaManager(parser, state_manager, condition_evaluator)
+
         execution_engine = ExecutionEngine(
             parser, state_manager, scene_executor, command_executor,
-            condition_evaluator, choice_processor, input_handler
+            condition_evaluator, choice_processor, input_handler,
+            event_manager, effects_manager, state_machine_manager,
+            meta_manager, random_manager
         )
 
         # 加载脚本
@@ -125,7 +155,7 @@ class TestScriptExecution:
 
         # 模拟选择第一个选项（进入森林）
         choice_index = 0
-        next_scene = execution_engine.process_choice(choice_index)
+        next_scene, messages = execution_engine.process_choice(choice_index)
 
         # 验证场景转换
         assert next_scene is not None

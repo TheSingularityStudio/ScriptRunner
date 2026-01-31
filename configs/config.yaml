@@ -1,0 +1,35 @@
+# ScriptRunner 配置文件
+# 这个文件包含了应用程序的所有配置选项
+
+# 日志配置
+logging:
+  level: INFO  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: logs/%Y-%m-%d.log  # 日志文件路径，支持时间格式化
+
+# 游戏配置
+game:
+  save_file: game_save.json  # 游戏存档文件路径
+  auto_save: true  # 是否启用自动保存
+
+# 用户界面配置
+ui:
+  type: console  # UI 类型: console, gui (未来支持)
+  clear_screen: true  # 是否在场景切换时清屏
+
+# 插件配置
+plugins:
+  enabled: []  # 启用的插件列表
+  directory: plugins  # 插件目录路径
+
+# 其他可选配置
+# database:
+#   type: json  # 数据库类型: json, sqlite (未来支持)
+#   path: data/  # 数据库文件路径
+
+# network:
+#   timeout: 30  # 网络超时时间（秒）
+#   retries: 3   # 重试次数
+
+# performance:
+#   max_memory: 512MB  # 最大内存使用
+#   thread_pool_size: 4  # 线程池大小
