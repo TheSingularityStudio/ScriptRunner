@@ -69,16 +69,36 @@ class ScriptCommandExecutor(ICommandExecutor):
 
         for action in actions:
             if isinstance(action, dict):
-                # 执行子命令
-                messages.extend(self.execute_command(action))
+                if 'message' in action:
+                    messages.append(action['message'])
+                else:
+                    # 执行子命令
+                    messages.extend(self.execute_command(action))
             elif isinstance(action, str):
-                # 执行简单动作
-                if action == 'message':
-                    msg = command_def.get('message', '')
-                    messages.append(msg)
-                elif action in self.actions:
-                    # 从插件执行动作
-                    messages.extend(self.actions[action](self.parser, self.state, self.condition_evaluator, command_value))
+                if action in self.actions:
+                    # 构建 context
+                    context = {
+                        'parser': self.parser,
+                        'state': self.state,
+                        'condition_evaluator': self.condition_evaluator,
+                        'command_value': command_value
+                    }
+                    result = self.actions[action](command_value, context)
+                    if isinstance(result, list):
+                        messages.extend(result)
+                    elif isinstance(result, dict):
+                        if 'message' in result:
+                            messages.append(result['message'])
+                        if 'actions' in result:
+                            # 执行附加动作
+                            for additional_action in result['actions']:
+                                if isinstance(additional_action, dict):
+                                    messages.extend(self.execute_command(additional_action))
+                                elif isinstance(additional_action, str):
+                                    # 递归执行
+                                    messages.extend(self._execute_script_command({'actions': [additional_action]}, command_value))
+                    else:
+                        logger.warning(f"Unexpected result type from action {action}: {type(result)}")
                 else:
                     logger.warning(f"Unknown script action: {action}")
 

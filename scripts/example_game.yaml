@@ -233,7 +233,7 @@ commands:
     description: "攻击目标"
     actions:
       - message: "你准备攻击..."
-      - attack_target
+      - attack
   search:
     description: "搜索当前区域"
     actions:

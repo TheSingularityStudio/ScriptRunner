@@ -67,9 +67,13 @@ class InputHandler(IInputHandler):
 
     def _get_action_context(self) -> Dict[str, Any]:
         """获取动作执行上下文。"""
+        state = self.state
+        if not hasattr(state, 'get_variable'):
+            logger.error(f"State manager is not properly initialized: {type(state)}")
+            raise ExecutionError("State manager is not properly initialized")
         return {
             'parser': self.parser,
-            'state': self.state,
+            'state': state,
             'config': self.config,
             'condition_evaluator': self.condition_evaluator,
             'interaction_manager': self.interaction_manager,

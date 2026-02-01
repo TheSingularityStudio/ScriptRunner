@@ -44,20 +44,31 @@ class CoreActionsPlugin(ActionPlugin):
             'spawn_object': self._execute_spawn_object,
         }
 
-    def _execute_set_variable(self, parser, state, condition_evaluator, command_value: Dict[str, Any]) -> List[str]:
+    def _execute_set_variable(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行设置变量命令。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        # 这个方法可能不直接使用，因为脚本使用 parse_and_set
+        command_value = target if isinstance(target, dict) else {'name': target, 'value': None}
         name = command_value.get('name')
         value = command_value.get('value')
         if name is not None and value is not None:
             state.set_variable(name, value)
             logger.debug(f"Set variable {name} = {value}")
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_parse_and_set(self, parser, state, condition_evaluator, expression: str) -> List[str]:
+    def _execute_parse_and_set(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行解析并设置命令，如 'has_key = true' 或 'health = 100'。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        expression = target
         if '=' not in expression:
             logger.warning(f"Invalid set expression: {expression}")
-            return []
+            return {'success': False, 'message': f'无效的设置表达式: {expression}', 'actions': []}
 
         key, value_str = expression.split('=', 1)
         key = key.strip()
@@ -79,57 +90,86 @@ class CoreActionsPlugin(ActionPlugin):
 
         state.set_variable(key, value)
         logger.debug(f"Set variable {key} = {value}")
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_set_flag(self, parser, state, condition_evaluator, flag_name: str) -> List[str]:
+    def _execute_set_flag(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """设置标志。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        flag_name = target
         state.set_flag(flag_name)
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_clear_flag(self, parser, state, condition_evaluator, flag_name: str) -> List[str]:
+    def _execute_clear_flag(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """清除标志。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        flag_name = target
         state.clear_flag(flag_name)
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_apply_effect(self, parser, state, condition_evaluator, effect_name: str) -> List[str]:
+    def _execute_apply_effect(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """应用效果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        effect_name = target
         effect = parser.get_effect(effect_name)
         if not effect:
             logger.warning(f"Effect not found: {effect_name}")
-            return []
+            return {'success': False, 'message': f'效果未找到: {effect_name}', 'actions': []}
 
         state.apply_effect(effect_name, effect)
         logger.debug(f"Applied effect: {effect_name}")
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_remove_effect(self, parser, state, condition_evaluator, effect_name: str) -> List[str]:
+    def _execute_remove_effect(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """移除效果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        effect_name = target
         state.remove_effect(effect_name)
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_goto(self, parser, state, condition_evaluator, scene_id: str) -> List[str]:
+    def _execute_goto(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """跳转到场景。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        scene_id = target
         state.set_current_scene(scene_id)
-        return []
+        return {'success': True, 'message': '', 'actions': []}
 
-    def _execute_if(self, parser, state, condition_evaluator, command: Dict[str, Any]) -> List[str]:
+    def _execute_if(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行条件命令并返回消息。"""
-        messages = []
-        condition = command.get('if')
-        then_commands = command.get('then', [])
-        else_commands = command.get('else', [])
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        # target 应该是条件，但 if 命令可能更复杂
+        # 这里简化处理
+        condition = target
+        # Note: This needs access to the command executor to execute commands
+        # For now, just log
+        logger.debug(f"Would execute if condition: {condition}")
+        return {'success': True, 'message': '', 'actions': []}
 
-        if condition_evaluator.evaluate_condition(condition):
-            # Note: This needs access to the command executor to execute commands
-            # For now, just log
-            logger.debug(f"Would execute then commands: {then_commands}")
-        else:
-            logger.debug(f"Would execute else commands: {else_commands}")
-        return messages
-
-    def _execute_spawn_object(self, parser, state, condition_evaluator, object_name: str) -> List[str]:
+    def _execute_spawn_object(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """生成对象。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
+        object_name = target
         # 这里需要实现生成对象的逻辑
         # 目前只是记录日志，实际实现需要根据游戏逻辑
         logger.debug(f"Spawning object: {object_name}")
-        return []
+        return {'success': True, 'message': '', 'actions': []}

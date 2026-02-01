@@ -15,7 +15,7 @@ class GameRunner:
 
     def __init__(self, container: Container):
         self.container = container
-        self.logger = get_logger('game_runner')
+        self.logger = get_logger(__name__)
 
     def run_game(self, script_file: str):
         """运行游戏。
