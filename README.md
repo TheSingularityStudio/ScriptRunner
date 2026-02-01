@@ -92,6 +92,7 @@ python main.py scripts/example_game.yaml
 
 - [DSL 语法手册](docs/syntax_manual.md) - 完整的 DSL 语法指南
 - [架构文档](docs/architecture.md) - 系统架构说明
+- [示例脚本](scripts/example_game.yaml) - 洞穴冒险示例脚本
 
 ## 测试
 
