@@ -5,6 +5,8 @@ Unit tests for InputHandler.
 import pytest
 from unittest.mock import Mock, patch
 from src.domain.runtime.input_handler import InputHandler
+from plugins.player_actions import PlayerActionsPlugin
+from plugins.basic_actions import BasicActionsPlugin
 
 
 class TestInputHandler:
@@ -26,11 +28,17 @@ class TestInputHandler:
         # 设置container的has方法
         self.mock_container.has.side_effect = lambda name: name in [
             'parser', 'state_manager', 'command_executor', 'event_manager',
-            'condition_evaluator', 'action_executor', 'interaction_manager'
+            'condition_evaluator', 'action_executor', 'interaction_manager', 'plugin_manager'
         ]
 
         # 设置container的get方法
-        self.mock_container.get.side_effect = lambda name: getattr(self, f'mock_{name}', None)
+        def mock_get(name):
+            if name == 'plugin_manager':
+                mock_pm = Mock()
+                mock_pm.get_plugins_by_type.return_value = [PlayerActionsPlugin(), BasicActionsPlugin()]
+                return mock_pm
+            return getattr(self, f'mock_{name}', None)
+        self.mock_container.get.side_effect = mock_get
 
         # 设置config的get方法
         self.mock_config.get.side_effect = lambda key, default=None: {
