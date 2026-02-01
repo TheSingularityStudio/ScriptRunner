@@ -36,6 +36,7 @@ class PluginManager:
         # 查找插件文件
         plugin_files = list(self.plugin_dir.glob('*.py'))
         plugin_files.extend(self.plugin_dir.glob('*/__init__.py'))
+        logger.debug(f"Found plugin files: {[str(f) for f in plugin_files]}")
 
         for plugin_file in plugin_files:
             try:
@@ -53,6 +54,12 @@ class PluginManager:
         module_path = str(rel_path).replace(os.sep, '.').replace('.py', '')
 
         try:
+            # 添加项目根目录到 Python 路径，以便插件可以导入 src 包
+            import sys
+            project_root = self.plugin_dir.parent
+            if str(project_root) not in sys.path:
+                sys.path.insert(0, str(project_root))
+
             module = importlib.import_module(module_path)
 
             # 在模块中查找插件类
@@ -60,7 +67,8 @@ class PluginManager:
                 attr = getattr(module, attr_name)
                 if (isinstance(attr, type) and
                     issubclass(attr, PluginInterface) and
-                    attr != PluginInterface):
+                    attr != PluginInterface and
+                    not hasattr(attr, '__abstractmethods__')):  # 确保不是抽象类
                     plugin_instance = attr()
                     self.register_plugin(plugin_instance.name, plugin_instance)
                     logger.debug(f"Loaded plugin: {plugin_instance.name}")

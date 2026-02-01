@@ -16,13 +16,96 @@ class TestCommandExecutor:
         self.mock_plugin_manager = Mock()
         # Mock the actions from plugins
         self.mock_plugin_manager.get_plugins_by_type.return_value = []
-        self.mock_plugin_manager.get_plugins_by_type.return_value = []  # No plugins by default
         self.executor = ScriptCommandExecutor(
             self.mock_parser,
             self.mock_state_manager,
             self.mock_condition_evaluator,
             self.mock_plugin_manager
         )
+        # Mock the actions dict to include core actions
+        def mock_parse_and_set(parser, state, condition_evaluator, expression):
+            if '=' not in expression:
+                return []
+            key, value_str = expression.split('=', 1)
+            key = key.strip()
+            value_str = value_str.strip()
+            if value_str.lower() == 'true':
+                value = True
+            elif value_str.lower() == 'false':
+                value = False
+            elif value_str.isdigit():
+                value = int(value_str)
+            elif value_str.replace('.', '').isdigit():
+                value = float(value_str)
+            elif value_str.startswith('"') and value_str.endswith('"'):
+                value = value_str[1:-1]
+            else:
+                value = value_str
+            state.set_variable(key, value)
+            return []
+
+        def mock_set_variable(parser, state, condition_evaluator, command_value):
+            name = command_value.get('name')
+            value = command_value.get('value')
+            if name is not None and value is not None:
+                state.set_variable(name, value)
+            return []
+
+        def mock_set_flag(parser, state, condition_evaluator, flag_name):
+            state.set_flag(flag_name)
+            return []
+
+        def mock_clear_flag(parser, state, condition_evaluator, flag_name):
+            state.clear_flag(flag_name)
+            return []
+
+        def mock_apply_effect(parser, state, condition_evaluator, effect_name):
+            effect = parser.get_effect(effect_name)
+            if effect:
+                state.apply_effect(effect_name, effect)
+            return []
+
+        def mock_remove_effect(parser, state, condition_evaluator, effect_name):
+            state.remove_effect(effect_name)
+            return []
+
+        def mock_goto(parser, state, condition_evaluator, scene_id):
+            state.set_current_scene(scene_id)
+            return []
+
+        def mock_if(parser, state, condition_evaluator, command):
+            condition = command.get('if')
+            then_commands = command.get('then', [])
+            else_commands = command.get('else', [])
+            if condition_evaluator.evaluate_condition(condition):
+                # For test, just evaluate condition
+                pass
+            return []
+
+        def mock_message(parser, state, condition_evaluator, message):
+            return [message]
+
+        def mock_spawn_object(parser, state, condition_evaluator, object_name):
+            return []
+
+        def mock_roll_table(parser, state, condition_evaluator, table_name):
+            table = parser.get_random_table(table_name)
+            if table:
+                pass  # mock
+            return []
+
+        self.executor.actions = {
+            'set_variable': mock_set_variable,
+            'parse_and_set': mock_parse_and_set,
+            'set_flag': mock_set_flag,
+            'clear_flag': mock_clear_flag,
+            'apply_effect': mock_apply_effect,
+            'remove_effect': mock_remove_effect,
+            'goto': mock_goto,
+            'if': mock_if,
+            'spawn_object': mock_spawn_object,
+            'roll_table': mock_roll_table,
+        }
 
     def test_initialization(self):
         """测试 CommandExecutor 初始化。"""

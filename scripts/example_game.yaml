@@ -238,6 +238,10 @@ commands:
     description: "搜索当前区域"
     actions:
       - search_location
+  spawn_object:
+    description: "生成对象"
+    actions:
+      - spawn_object
 
 # 互动系统定义复杂的玩家互动
 interaction:
