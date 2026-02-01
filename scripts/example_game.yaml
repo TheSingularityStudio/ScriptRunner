@@ -1,486 +1,281 @@
-# Elderwood Chronicles 游戏配置文件
-# 此文件定义了游戏世界、玩家、对象、事件和位置
+# ScriptRunner 示例游戏：洞穴冒险
+# 这个示例展示了DSL格式的主要功能，包括对象定义、命令解析、效果系统等
+# 游戏背景：玩家进入一个神秘洞穴，寻找宝藏并对抗怪物
 
-game: "Elderwood Chronicles"  # 游戏标题
+# 游戏基本信息
+game:
+  title: "洞穴冒险"  # 游戏标题
+  version: "1.0"     # 版本号
+  author: "ScriptRunner示例"  # 作者
+  description: "一个简单的文字冒险游戏示例"  # 游戏描述
 
-# 世界设置定义全局游戏环境
+# 世界设置
 world:
-  start: "village_square"  # 玩家的起始位置
-  time_scale: "1 minute real = 10 minutes game"  # 时间进度率
-  moon_phase: "new"  # 当前月相，影响事件
+  start: "cave_entrance"  # 起始场景ID
+  description: "一个充满危险和宝藏的古老洞穴"  # 世界描述
 
-# 玩家配置定义玩家角色的起始状态
-player:
-  # 影响各种游戏机制的基础属性
-  attributes:
-    strength: 10      # 战斗和互动的体力
-    intelligence: 8   # 谜题和魔法的智力
-    agility: 12       # 速度和敏捷
-    stamina: 20       # 持续活动的耐力
-    health: 100       # 当前生命值
-    gold: 50          # 起始货币
-    reputation: 0     # 社会地位
-    defense: 7        # 基础防御值
-  # 可以升级并提供加成的技能
-  skills:
-    - name: "swordsmanship"
-      base_attribute: "strength"
-      level: 1
-      damage_bonus: 2
-    - name: "stealth"
-      base_attribute: "agility"
-      level: 1
-      success_bonus: 0.1
-  # 玩家的物品栏系统
-  inventory:
-    capacity: 20      # 最大物品数量
-    items: []         # 起始物品（空）
-
-# 定义游戏世界中可能出现的对象
+# 对象定义 - 定义游戏中的物品、NPC、容器等
 define_object:
-  # 哥布林生物定义
+  # 武器对象
+  rusty_sword:
+    type: "weapon"        # 对象类型
+    name: "生锈的剑"       # 显示名称
+    damage: 8            # 伤害值
+    description: "一把生锈但仍然锋利的剑"  # 描述
+    aliases: ["剑", "铁剑"]  # 别名，用于命令解析
+
+  # 敌人对象
   goblin:
-    type: "creature"          # 对象类型：生物、物品、容器等
-    name: "哥布林"             # 显示名称
-    aliases: ["绿皮", "小怪物"] # 识别的替代名称
-    attributes:               # 生物的基础属性
-      strength: 8
-      defense: 5
-      agility: 10
-    states:                   # 可改变的动态属性
-      - name: "health"
-        value: 30
-        min: 0
-        max: 100
-      - name: "hostile"
-        value: true
-        type: "boolean"
-    behaviors:                # 生物可以执行的动作
-      attack:
-        damage: "strength + random(1, 6)"  # 伤害公式
-        hit_chance: "0.7 + (agility - player.agility) * 0.05"  # 命中概率
-        success: "你击中了{target}，造成{damage}点伤害！"
-        failure: "你没能打中{target}"
-        counter: "哥布林反击了你！"
-        counter_damage: 5
-        counter_damage_msg: "你受到了{counter_damage}点反击伤害！"
-        combat_attributes: ["strength", "agility", "defense", "health"]
-        health_attribute: "health"
-        player_health_attribute: "health"
-      talk:
-        responses:            # 可能的对话响应
-          - "滚开，人类！"
-          - "这里是我的地盘！"
-    random:                   # 随机属性
-      health: "20-40"         # 生命值范围
-      loot_table: "goblin_loot"  # 击败后掉落的战利品
+    type: "enemy"        # 敌人类型
+    name: "哥布林"       # 名称
+    health: 20          # 生命值
+    damage: 5           # 攻击力
+    loot_table: "goblin_loot"  # 掉落表
+    description: "一个丑陋的绿色哥布林"  # 描述
 
-  goblin_loot:
-    type: "loot_table"
-    entries:
-      - item: "gold_coin"
-        weight: 50
-      - item: "herb"
-        weight: 30
-      - item: "dagger"
-        weight: 20
+  # 容器对象
+  treasure_chest:
+    type: "container"    # 容器类型
+    name: "宝箱"         # 名称
+    locked: true        # 是否上锁
+    contents: ["gold", "health_potion"]  # 内容物
+    description: "一个古老的木制宝箱"  # 描述
 
-  ancient_chest:
-    type: "container"
-    name: "古老的箱子"
-    description: "一个布满灰尘的古老箱子，上面刻着奇怪的符号。"
+  # 物品对象
+  gold:
+    type: "item"         # 物品类型
+    name: "金币"         # 名称
+    value: 50           # 价值
+    description: "闪闪发光的金币"  # 描述
 
-  werewolf:
-    type: "creature"
-    name: "狼人"
-    states:
-      - name: "health"
-        value: 50
-        min: 0
-        max: 100
-      - name: "transformed"
-        value: false
-        type: "boolean"
-    behaviors:
-      attack:
-        success: "你击中了狼人！"
-        failure: "狼人躲开了你的攻击。"
-    random:
-      loot_table: "werewolf_loot"
+  health_potion:
+    type: "item"         # 物品类型
+    name: "治疗药水"     # 名称
+    healing: 20         # 治疗量
+    description: "红色的治疗药水，可以恢复生命值"  # 描述
 
-  hidden_cache:
-    type: "item"
-    name: "隐藏的宝藏"
-    description: "一个隐藏在树根下的小宝藏。"
-
-  forest_loot:
-    type: "loot_table"
-    entries:
-      - item: "gold_coin"
-        weight: 50
-      - item: "herb"
-        weight: 30
-      - item: "dagger"
-        weight: 20
-
-  werewolf_loot:
-    type: "loot_table"
-    entries:
-      - item: "silver_fang"
-        weight: 40
-      - item: "wolf_pelt"
-        weight: 35
-      - item: "gold_coin"
-        weight: 25
-
-# 事件系统处理游戏中的自动和触发事件
-event_system:
-  # 定时事件在特定时间或条件下发生
-  scheduled_events:
-    - trigger: "time > 1800"    # 当游戏时间超过1800时触发
-      action: "spawn_werewolf"  # 要执行的动作
-      chance: 0.3               # 事件发生的概率
-  # 反应事件响应玩家动作或世界变化
-  reactive_events:
-    - trigger: "player.action = 'search'"  # 在玩家搜索动作上触发
-      conditions:                          # 要检查的附加条件
-        - "location = 'forest_path'"       # 必须在森林小路上
-        - "perception_check > 15"          # 感知技能检查
-      actions:                             # 要执行的动作
-        - spawn_object: 'hidden_cache'   # 生成隐藏宝藏对象
-        - log: '你在树根下发现了一些东西...'  # 向玩家记录消息
-    - trigger: "world.moon_phase = 'full'"  # 在满月时触发
-      actions:
-        - transform: werewolf.human -> werewolf.beast  # 变换狼人
-        - broadcast: '远处传来狼嚎声...'              # 广播消息
-
+# 命令解析器 - 定义如何解析玩家的自然语言输入
 command_parser:
   verbs:
+    # 拿取命令
     take:
-      patterns: ["拿起", "拿", "捡起", "拾取"]
-      requires: ["item"]
-      aliases: ["take", "pick", "get"]
-    attack:
-      patterns: ["攻击", "打击", "砍", "杀"]
-      requires: ["target"]
-      aliases: ["fight", "hit"]
-    examine:
-      patterns: ["检查", "查看", "观察", "调查"]
-      requires: ["object"]
+      patterns: ["拿", "拿起", "取", "捡起"]  # 中文模式
+      aliases: ["get", "pick"]               # 英文别名
+
+    # 使用命令
     use:
-      patterns: ["使用", "运用", "动用"]
-      requires: ["item", "target?"]
-    combine:
-      patterns: ["组合", "合成", "制作"]
-      requires: ["item_a", "item_b"]
-    search:
-      patterns: ["搜索", "寻找", "查找"]
-      requires: ["location"]
-    inventory:
-      patterns: ["查看背包", "背包", "物品栏", "inventory"]
-      requires: []
-      aliases: ["inv", "bag"]
+      patterns: ["使用", "用", "喝"]  # 中文模式
+      aliases: ["utilize"]           # 英文别名
+
+    # 攻击命令
+    attack:
+      patterns: ["攻击", "打", "杀", "砍"]  # 中文模式
+      aliases: ["fight", "hit"]            # 英文别名
+
+    # 查看命令
+    look:
+      patterns: ["看", "查看", "观察", "检查"]  # 中文模式
+      aliases: ["examine", "inspect"]          # 英文别名
+
+    # 打开命令
+    open:
+      patterns: ["打开", "开"]  # 中文模式
+      aliases: ["unlock"]       # 英文别名
+
   nouns:
-    dynamic_match:
-      - pattern: "(.+)的(.+)"
-        capture: ["owner", "object"]
-      - pattern: '第(\d+)个(.+)'
-        capture: ["index", "object"]
+    # 代词
     pronouns:
-      它: "last_target"
-      这里: "current_location"
-      那个: "last_mentioned"
+      它: "last_object"      # 指代上一个对象
+      他: "last_character"   # 指代上一个角色
+      她: "last_character"   # 指代上一个角色
 
-# 命令定义 - 脚本驱动的命令行为
-commands:
-  set:
-    description: "设置变量"
-    actions:
-      - parse_and_set
-  set_variable:
-    description: "设置变量"
-    actions:
-      - set_variable
-  set_flag:
-    description: "设置标志"
-    actions:
-      - set_flag
-  clear_flag:
-    description: "清除标志"
-    actions:
-      - clear_flag
-  roll_table:
-    description: "滚动随机表"
-    actions:
-      - roll_table
-  apply_effect:
-    description: "应用效果"
-    actions:
-      - apply_effect
-  remove_effect:
-    description: "移除效果"
-    actions:
-      - remove_effect
-  goto:
-    description: "跳转到场景"
-    actions:
-      - goto
-  if:
-    description: "条件执行"
-    actions:
-      - if
-  attack:
-    description: "攻击目标"
-    actions:
-      - message: "你准备攻击..."
-      - attack
-  search:
-    description: "搜索当前区域"
-    actions:
-      - search_location
-  spawn_object:
-    description: "生成对象"
-    actions:
-      - spawn_object
-
-# 互动系统定义复杂的玩家互动
-interaction:
-  # 多步骤互动，如制作
-  multi_step:
-    craft_potion:            # 药水制作互动
-      steps:                  # 互动的顺序步骤
-        1:
-          prompt: "你想要制作什么药水？"  # 步骤1提示
-          options: ["治疗药水", "力量药水", "隐形药水"]  # 选择
-        2:
-          prompt: "选择主要材料："  # 步骤2提示
-          validate: "item in inventory and item.type = 'herb'"  # 验证
-        3:
-          prompt: "选择催化剂："  # 步骤3提示
-          validate: "item in inventory and item.alchemical = true"  # 验证
-      result:                 # 结果消息
-        success: "你成功制作了{potion_name}！"
-        failure: "混合物发出奇怪的声音然后消失了..."
-  # 基于物理的互动
-  physics:
-    push:                    # 推动对象
-      base_chance: 0.7       # 基础成功几率
-      modifiers:             # 属性修改器
-        strength: "0.1 per point above 10"
-        object_weight: "-0.05 per kg"
-    climb:                   # 攀爬
-      difficulty_class: 15   # 成功难度等级
-      skills: ["athletics", "acrobatics"]  # 相关技能
-
-# 随机系统处理程序生成和随机事件
-random_system:
-  # 各种游戏事件的预定义随机表
-  tables:
-    forest_encounters:         # 森林中的随机遭遇
-      type: "weighted"         # 加权随机选择
-      entries:
-        - value: "nothing"      # 无遭遇
-          weight: 40           # 概率权重
-        - value: "hostile_goblin"  # 哥布林遭遇
-          weight: 25
-          min_level: 1         # 最小玩家等级
-        - value: "friendly_traveler"  # 友好的旅行者
-          weight: 15
-          condition: "!player.reputation.evil"  # 出现条件
-        - value: "random_item"  # 随机物品
-          weight: 20
-          table: "forest_loot"  # 引用战利品表
-    forest_path_search:        # 森林小路搜索结果
-      type: "weighted"
-      entries:
-        - value: "nothing"
-          weight: 60
-          message: "你搜索了周围，但没有发现什么特别的东西。"
-        - value: "hidden_cache"
-          weight: 40
-          condition: "perception_check > 15"  # 需要技能检查
-          commands:            # 成功时执行的命令
-            - spawn_object: "hidden_cache"
-          message: "你在树根下发现了一些东西！"
-    dynamic_dialog:            # 随机化的NPC对话
-      type: "template"         # 基于模板的生成
-      template: "{greeting}，{player_name}。{quest_hint}"
-      variables:               # 变量替换
-        greeting: ["你好", "欢迎", "嘿"]
-        quest_hint: ["最近森林不太平", "我听说有个宝藏", "小心那些哥布林"]
-    village_events:            # 村庄中的随机事件
-      type: "weighted"
-      entries:
-        - value: "merchant_arrival"
-          weight: 30
-          condition: "time_of_day = 'day'"
-        - value: "rumor_spread"
-          weight: 20
-        - value: "weather_change"
-          weight: 50
-  # 程序生成算法
-  procedural:
-    dungeon_room:              # 地牢房间生成
-      algorithm: "cellular_automata"  # 生成算法
-      parameters:              # 算法参数
-        size: "10x10"
-        wall_density: 0.45
-        iterations: 4
-    npc_personality:           # NPC个性特征
-      traits:                  # 个性维度
-        - dimension: "friendliness"
-          range: "-5 to 5"
-        - dimension: "greed"
-          range: "0-10"
-      reactions:               # 对玩家动作的反应
-        - when: "player.action = 'give_gift'"
-          effect: "friendliness += gift.value / 10"
-        - when: "player.action = 'insult'"
-          effect: "friendliness -= 2"
-    quest_generation:          # 动态任务创建
-      algorithm: "template_based"  # 基于模板的生成
-      templates:               # 任务模板
-        - type: "fetch"        # 获取任务类型
-          template: "从{location}获取{item}并带回给{npc}"
-        - type: "kill"         # 击杀任务类型
-          template: "击败{count}个{monster}并带回证明"
-      parameters:              # 模板参数
-        location: ["森林", "村庄", "洞穴"]
-        item: ["药草", "宝藏", "武器"]
-        npc: ["铁匠", "旅馆老板", "村民"]
-        monster: ["哥布林", "狼人", "野兽"]
-        count: "1-5"
-
-state_machines:
-  day_night_cycle:
-    states: ["dawn", "day", "dusk", "night"]
-    transitions:
-      - from: "night"
-        to: "dawn"
-        condition: "time > 240 && time < 300"
-      - from: "dawn"
-        to: "day"
-        condition: "time > 300 && time < 360"
-      - from: "day"
-        to: "dusk"
-        condition: "time > 360 && time < 420"
-      - from: "dusk"
-        to: "night"
-        condition: "time > 420 && time < 480"
-    effects:
-      night:
-        - "visibility: 0.3"
-        - "monster_spawn_rate: 2.0"
-      day:
-        - "visibility: 1.0"
-        - "foraging_yield: 1.5"
-
-# 效果定义玩家或对象的临时状态效果
-effects:
-  poisoned:                    # 中毒状态效果
-    duration: "5 turns"        # 效果持续时间
-    tick: "every turn"         # 效果触发时机
-    action: "player.health -= 5"  # 每次执行的动作
-    message: "你感到毒液在体内蔓延..."  # 显示给玩家的消息
-  blessed:                     # 祝福状态效果
-    duration: "1 hour"         # 效果持续时间
-    modifiers:                 # 应用的属性修改器
-      luck: 2                  # 增加幸运值2
-      damage: "*1.1"           # 伤害乘以1.1
-
-# 元数据包含宏定义和动态脚本
-meta:
-  # 宏定义用于简化条件检查
-  macros:
-    is_combat_ready: >          # 检查是否准备好战斗
-      health > 0 and
-      stamina > 10 and
-      not has_status('stunned')
-    can_afford: >               # 检查是否能买得起物品
-      player.gold >= item.price and
-      (item.restricted ? player.reputation >= item.min_reputation : true)
-  # 动态脚本用于程序生成内容
-  dynamic_scripts:
-    generate_quest:             # 任务生成脚本
-      parameters: ["target", "reward"]  # 参数列表
-      template: |               # 模板字符串
-        quest:
-          objective: "击败{target}"
-          reward: "{reward}"
-          difficulty: calculate_difficulty(target)
-    describe_room:              # 房间描述脚本
-      algorithm: "markov_chain" # 使用马尔可夫链算法
-      training_data: "room_descriptions.txt"  # 训练数据文件
-
-# 位置定义游戏世界区域及其属性
-locations:
-  # 村庄广场 - 起始位置
-  village_square:
-    description: |              # 使用变量的动态描述
-      {time_of_day}的村庄广场上{random_villager_count}个村民正在忙碌。
-      {weather_description}
-      你可以看到{visible_buildings}。
-    variables:                  # 描述的变量替换
-      time_of_day: ["清晨", "正午", "黄昏", "深夜"]
-      weather_description: ["细雨蒙蒙", "雾气弥漫", "月光皎洁"]
-      visible_buildings: ["铁匠铺", "旅馆", "教堂"]
-      random_villager_count: "2-6"
-    objects:                    # 此位置存在的对象
-      - ref: "ancient_chest"    # 引用定义的对象
-        interactive: true       # 玩家是否可以与之互动
-    exits:                      # 连接的位置
-      north: "forest_path"
-      east: "abandoned_camp"
-    choices:                    # 玩家动作选择
-      - text: "进入森林"
-        next: "forest_path"
-      - text: "检查古老的箱子"
-        next: "chest_opened"
-        condition: "!has_opened_chest"  # 选择可用的条件
-
-  forest_path:
-    description: |
-      你走在森林小路上。
-      周围是茂密的树木，远处传来鸟儿的叫声。
-      {goblin_description}
-      {werewolf_description}
-    variables:
-      goblin_description: ["", "你看到前方有一个哥布林！"]
-      werewolf_description: ["", "远处传来低沉的狼嚎声...", "你隐约看到树影中闪过一对绿色的眼睛。"]
+    # 对象别名
     objects:
-      - ref: "goblin"
-        count: "1-3"
-        spawn_condition: "!player.stealth"
-      - ref: "werewolf"
-        count: "0-1"
-        spawn_condition: "world.moon_phase = 'full' and random_chance(0.2)"
+      剑: "rusty_sword"      # 剑的别名
+      宝箱: "treasure_chest"  # 宝箱的别名
+      哥布林: "goblin"       # 哥布林的别名
+      金币: "gold"           # 金币的别名
+      药水: "health_potion"  # 药水的别名
+
+# 效果系统 - 定义游戏中的各种效果
+effects:
+  # 力量增益效果
+  strength_buff:
+    type: "temporary"     # 临时效果
+    duration: 3          # 持续3回合
+    modifiers:
+      damage: +3         # 增加3点伤害
+    description: "剑术增强，增加攻击力"  # 描述
+
+  # 中毒效果
+  poison:
+    type: "temporary"     # 临时效果
+    duration: 5          # 持续5回合
+    damage_per_turn: 2   # 每回合2点伤害
+    description: "中毒状态，每回合受到伤害"  # 描述
+
+  # 治疗效果
+  healing:
+    type: "instant"       # 即时效果
+    healing: 20          # 恢复20点生命
+    description: "恢复生命值"  # 描述
+
+# 随机系统 - 定义随机事件和掉落
+random_system:
+  tables:
+    # 哥布林掉落表
+    goblin_loot:
+      - item: "gold"           # 掉落金币
+        weight: 70            # 权重70%
+        count: [1, 3]         # 数量1-3个
+      - item: "health_potion"  # 掉落药水
+        weight: 30            # 权重30%
+        count: 1              # 数量1个
+
+# 场景定义 - 游戏的主要场景和选择
+locations:
+  # 洞穴入口场景
+  cave_entrance:
+    description: "你站在洞穴入口，里面漆黑一片但隐约传来水滴声。入口处散落着一些碎石。"
+    choices:
+      - text: "进入洞穴"      # 选择文本
+        next: "main_chamber"  # 下一个场景
+      - text: "捡起地上的石头看看"
+        next: "examine_rocks"  # 检查石头场景
+      - text: "离开洞穴"
+        next: "exit_game"      # 退出游戏
+
+  # 检查石头场景
+  examine_rocks:
+    description: "你捡起一块石头，发现它其实是把生锈的剑！这可能是某个冒险者的遗物。"
+    choices:
+      - text: "拿起剑"
+        next: "cave_entrance"  # 返回入口
+        commands:              # 执行命令
+          - add_item: "rusty_sword"  # 添加物品到背包
+          - add_flag: "has_sword"    # 设置标志
+          - show_message: "你获得了生锈的剑！"  # 显示消息
+      - text: "扔掉剑"
+        next: "cave_entrance"  # 返回入口
+
+  # 主房间场景
+  main_chamber:
+    description: "你进入了一个宽敞的洞穴主室。房间中央有一个古老的宝箱，角落里似乎有什么东西在动。"
+    choices:
+      - text: "走向宝箱"
+        next: "treasure_approach"  # 接近宝箱
+      - text: "调查角落的动静"
+        next: "goblin_encounter"   # 遇到哥布林
+      - text: "离开房间"
+        next: "cave_entrance"      # 返回入口
+
+  # 宝箱接近场景
+  treasure_approach:
+    description: "你走近宝箱，发现它上了锁。宝箱表面布满灰尘，看起来很古老。"
+    choices:
+      - text: "尝试打开宝箱"
+        next: "treasure_locked"     # 宝箱上锁
+        condition: "not has_flag('has_sword')"  # 条件：没有剑
+      - text: "用剑撬开宝箱"
+        next: "treasure_opened"     # 宝箱打开
+        condition: "has_flag('has_sword')"      # 条件：有剑
+        commands:
+          - apply_effect: "strength_buff"  # 应用力量增益
+          - show_message: "你用力撬开了宝箱！"  # 显示消息
+      - text: "返回主室"
+        next: "main_chamber"        # 返回主室
+
+  # 宝箱上锁场景
+  treasure_locked:
+    description: "宝箱紧紧地锁着，你没有工具可以打开它。"
+    choices:
+      - text: "返回主室"
+        next: "main_chamber"  # 返回主室
+
+  # 宝箱打开场景
+  treasure_opened:
+    description: "宝箱打开了！里面有闪闪发光的金币和一瓶红色的药水。"
+    choices:
+      - text: "拿走所有物品"
+        next: "victory"  # 胜利场景
+        commands:
+          - add_item: "gold"          # 添加金币
+          - add_item: "health_potion" # 添加药水
+          - set_variable: {key: "score", value: 100}  # 设置分数
+          - show_message: "你找到了宝藏！"  # 显示消息
+      - text: "只拿金币"
+        next: "victory"  # 胜利场景
+        commands:
+          - add_item: "gold"  # 添加金币
+          - set_variable: {key: "score", value: 50}  # 设置分数
+
+  # 哥布林遭遇场景
+  goblin_encounter:
+    description: "角落里的动静原来是一个丑陋的哥布林！它发现了你，举起武器准备战斗。"
     choices:
       - text: "攻击哥布林"
-        next: "forest_path"
+        next: "combat_start"  # 开始战斗
+        condition: "has_flag('has_sword')"  # 条件：有剑
+      - text: "逃跑"
+        next: "main_chamber"  # 返回主室
         commands:
-          - attack: "goblin"
-      - text: "攻击狼人"
-        next: "forest_path"
-        commands:
-          - attack: "werewolf"
-        condition: "werewolf.present"
-      - text: "偷偷溜走"
-        next: "village_square"
-        condition: "agility > 10"
-      - text: "搜索周围"
-        next: "forest_path"
-        commands:
-          - search: "forest_path"
+          - show_message: "你成功逃脱了哥布林的追击。"  # 显示消息
+      - text: "试图和哥布林对话"
+        next: "goblin_talk"  # 对话场景
 
-  chest_opened:
-    description: |
-      你打开了古老的箱子，发现里面有一把生锈的钥匙。
-      钥匙上刻着奇怪的符号。
-    commands:
-      - set: "has_key = true"
-      - set_flag: "has_opened_chest"
+  # 哥布林对话场景
+  goblin_talk:
+    description: "哥布林用奇怪的语言对你吼叫，似乎不打算和你交流。它看起来很生气。"
     choices:
-      - text: "拿起钥匙"
-        next: "village_square"
-      - text: "离开箱子"
-        next: "village_square"
+      - text: "攻击它"
+        next: "combat_start"  # 开始战斗
+      - text: "逃跑"
+        next: "main_chamber"  # 返回主室
+
+  # 战斗开始场景
+  combat_start:
+    description: "战斗开始了！你和哥布林互相攻击。"
+    choices:
+      - text: "继续战斗"
+        next: "combat_result"  # 战斗结果
+        commands:
+          - roll_dice: {table: "goblin_loot", result_var: "combat_loot"}  # 随机掉落
+          - show_message: "你击败了哥布林！"  # 显示消息
+      - text: "逃跑"
+        next: "main_chamber"  # 返回主室
+        commands:
+          - apply_effect: "poison"  # 应用中毒效果
+          - show_message: "你在逃跑时被哥布林抓伤了。"  # 显示消息
+
+  # 战斗结果场景
+  combat_result:
+    description: "哥布林倒下了。从它的尸体上，你找到了一些战利品。"
+    choices:
+      - text: "拿走战利品"
+        next: "main_chamber"  # 返回主室
+        commands:
+          - add_item: "{combat_loot}"  # 添加随机战利品
+          - set_variable: {key: "score", value: 50}  # 设置分数
+      - text: "离开尸体"
+        next: "main_chamber"  # 返回主室
+
+  # 胜利场景
+  victory:
+    description: "恭喜！你成功完成了洞穴冒险。你找到了宝藏并安全返回。"
+    choices:
+      - text: "结束游戏"
+        next: "exit_game"  # 退出游戏
+
+  # 退出游戏场景
+  exit_game:
+    description: "游戏结束。感谢游玩！"
+    choices: []  # 没有选择，游戏结束
+
+# 元数据 - 游戏的额外信息
+meta:
+  version: "1.0"
+  author: "ScriptRunner示例"
+  description: "洞穴冒险游戏示例，展示了DSL的主要功能"
+  tags: ["冒险", "战斗", "探索", "示例"]
+  difficulty: "简单"
+  estimated_time: "10分钟"
