@@ -1,17 +1,18 @@
 """
-Basic Actions Plugin for ScriptRunner.
-Provides common game actions like attack and search.
+ScriptRunner 的基础动作插件。
+提供常见的游戏动作，如攻击和搜索。
 """
 
 from typing import Dict, Any, List, Callable
-from ..src.infrastructure.plugin_interface import ActionPlugin
-from ..src.infrastructure.logger import get_logger
+from src.infrastructure.plugin_interface import ActionPlugin
+from src.infrastructure.logger import get_logger
+from src.utils.expression_evaluator import ExpressionEvaluator
 
 logger = get_logger(__name__)
 
 
 class BasicActionsPlugin(ActionPlugin):
-    """Basic actions plugin providing attack and search functionality."""
+    """提供攻击和搜索功能的基础动作插件。"""
 
     @property
     def name(self) -> str:
@@ -22,82 +23,92 @@ class BasicActionsPlugin(ActionPlugin):
         return "1.0.0"
 
     def initialize(self, context: Dict[str, Any]) -> bool:
-        """Initialize the plugin."""
+        """初始化插件。"""
         logger.info("BasicActions plugin initialized")
         return True
 
     def shutdown(self) -> None:
-        """Shutdown the plugin."""
+        """关闭插件。"""
         logger.info("BasicActions plugin shutdown")
 
-    def get_actions(self) -> Dict[str, Callable]:
-        """Return the actions provided by this plugin."""
+    def get_actions(self) -> Dict[str, Callable[[str, Dict[str, Any]], Dict[str, Any]]]:
+        """返回此插件提供的动作。"""
         return {
-            'attack_target': self._execute_attack,
-            'search_location': self._execute_search,
+            'attack': self._execute_attack,
+            'search': self._execute_search,
+            'roll_table': self._execute_roll_table,
         }
 
-    def _execute_attack(self, parser, state, condition_evaluator, target: str) -> List[str]:
-        """Execute attack command and return messages."""
+    def _execute_attack(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行攻击命令并返回结果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
         messages = []
-        # Get target object
+        actions = []
+        # 获取目标对象
         target_obj = parser.get_object(target)
         if not target_obj:
             logger.warning(f"Attack target not found: {target}")
-            return messages
+            return {'success': False, 'message': f"无法找到攻击目标 {target}", 'actions': []}
 
         target_attrs = target_obj.get('attributes', {})
         behaviors = target_obj.get('behaviors', {})
         attack_behavior = behaviors.get('attack', {})
 
-        # Get combat attributes from config
+        # 从配置中获取战斗属性
         combat_attributes = attack_behavior.get('combat_attributes', ['strength', 'agility', 'defense', 'health'])
         player_attrs = {}
         for attr in combat_attributes:
             player_attrs[attr] = state.get_variable(attr, 0)
 
-        # Calculate hit chance
+        # 计算命中几率
         hit_chance_expr = attack_behavior.get('hit_chance', '0.5')
         context = {**player_attrs, **target_attrs}
-        # Add player. prefixed variables
+        # 添加 player. 前缀变量
         context.update({f'player.{k}': v for k, v in player_attrs.items()})
-        # Add player and target dicts for dot notation access
+        # 添加 player 和 target 字典以支持点号访问
         context['player'] = player_attrs
         context['target'] = target_attrs
-        hit_chance = self._evaluate_expression(hit_chance_expr, context)
+        hit_chance = ExpressionEvaluator.evaluate_expression(hit_chance_expr, context)
 
         import random
         if random.random() < hit_chance:
-            # Hit
+            # 命中
             damage_expr = attack_behavior.get('damage', '10')
-            damage = self._evaluate_expression(damage_expr, context)
+            damage = ExpressionEvaluator.evaluate_expression(damage_expr, context)
 
-            # Apply damage to target
+            # 对目标造成伤害
             health_attr = attack_behavior.get('health_attribute', 'health')
             states = target_obj.get('states', [])
             for state in states:
-                if state['name'] == health_attr:
+                state_name = state.get('name', 'health')  # 默认使用health
+                if state_name == health_attr:
+                    old_value = state['value']
                     state['value'] = max(0, state['value'] - damage)
+                    # 添加设置变量的动作
+                    actions.append(f"set:{target}_{health_attr}={state['value']}")
                     break
 
-            # Success message
+            # 成功消息
             success_msg = attack_behavior.get('success', '你击中了{target}，造成{damage}点伤害！')
             success_msg = success_msg.replace('{target}', target).replace('{damage}', str(damage))
             messages.append(success_msg)
             logger.debug(success_msg)
         else:
-            # Miss
+            # 未命中
             failure_msg = attack_behavior.get('failure', '你没能打中{target}')
             failure_msg = failure_msg.replace('{target}', target)
             messages.append(failure_msg)
             logger.debug(failure_msg)
 
-        # Counter attack
+        # 反击
         counter_msg = attack_behavior.get('counter', '')
         if counter_msg:
             messages.append(counter_msg)
             logger.debug(counter_msg)
-            # Counter damage from config, default 5
+            # 从配置中获取反击伤害，默认 5
             counter_damage = attack_behavior.get('counter_damage', 5)
             player_health_attr = attack_behavior.get('player_health_attribute', 'health')
             player_health = state.get_variable(player_health_attr, 100)
@@ -106,92 +117,65 @@ class BasicActionsPlugin(ActionPlugin):
             counter_damage_msg = counter_damage_msg.replace('{counter_damage}', str(counter_damage))
             messages.append(counter_damage_msg)
             logger.debug(f"Player took {counter_damage} counter damage")
-        return messages
+        
+        return {'success': True, 'message': '\n'.join(messages), 'actions': actions}
 
-    def _execute_search(self, parser, state, condition_evaluator, location: str) -> List[str]:
-        """Execute search command and return messages."""
+    def _execute_search(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行搜索命令并返回结果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
         messages = []
-        logger.info(f"Searching {location}...")
+        logger.info(f"Searching {target}...")
 
-        # Dynamically build search table name, e.g. {location}_search
-        table_name = f"{location}_search"
+        # 动态构建搜索表名称，例如 {location}_search
+        table_name = f"{target}_search"
         table = parser.get_random_table(table_name)
         if table:
-            messages.extend(self._execute_roll_table(parser, table_name))
+            result = self._execute_roll_table(table_name, context)
+            return result
         else:
-            msg = f"No items found while searching {location}."
-            messages.append(msg)
-            logger.info(msg)
-        return messages
+            msg = f"你搜索了{target}，但没有发现什么特别的东西。"
+            return {'success': True, 'message': msg, 'actions': []}
 
-    def _execute_roll_table(self, parser, table_name: str) -> List[str]:
-        """Execute random table roll and return messages."""
+    def _execute_roll_table(self, table_name: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行随机表掷骰并返回结果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
         messages = []
         table = parser.get_random_table(table_name)
         if not table:
             logger.warning(f"Random table not found: {table_name}")
-            return messages
+            return {'success': False, 'message': f"找不到随机表 {table_name}", 'actions': []}
 
         entries = table.get('entries', [])
         if not entries:
             logger.warning(f"Random table {table_name} has no entries")
-            return messages
+            return {'success': False, 'message': f"随机表 {table_name} 为空", 'actions': []}
 
         import random
-        # Randomly select entry
+        # 随机选择条目
         result = random.choice(entries)
         logger.debug(f"Rolled table {table_name}: {result}")
 
-        # If result has message, add message
+        # 如果结果有消息，添加消息
+        message = ""
         if isinstance(result, dict) and 'message' in result:
-            messages.append(result['message'])
+            message = result['message']
 
-        # If result has commands, execute them
+        # 如果结果有命令，执行它们
+        actions = []
         if isinstance(result, dict) and 'commands' in result:
-            # Note: This would need access to the executor to execute commands
-            # For now, just log that commands would be executed
+            # 将命令转换为DSL动作
+            for cmd in result['commands']:
+                if 'set_flag' in cmd:
+                    actions.append(f"add_flag:{cmd['set_flag']}")
+                elif 'set' in cmd:
+                    actions.append(f"set:{cmd['set']}")
+                # 其他命令可以扩展
             logger.debug(f"Would execute commands: {result['commands']}")
-        return messages
-
-    def _evaluate_expression(self, expression: str, context: dict) -> Any:
-        """
-        Safely evaluate a mathematical or logical expression with limited context.
-        """
-        # Create a safe context that allows dictionary access via dot notation
-        class DotDict(dict):
-            """Dictionary subclass that allows attribute-style access for dot notation."""
-            def __getattr__(self, key):
-                return self[key]
-
-        def is_safe_value(v):
-            """Check if a value is safe to include in the evaluation context."""
-            if isinstance(v, (int, float, bool)):
-                return True
-            elif isinstance(v, dict):
-                # Ensure all nested values are also safe
-                return all(isinstance(sub_v, (int, float, bool)) for sub_v in v.values())
-            return False
-
-        safe_context = {}
-        for k, v in context.items():
-            if isinstance(v, dict):
-                # Wrap dictionaries to support dot notation (e.g., player.health)
-                safe_context[k] = DotDict(v)
-            elif is_safe_value(v):
-                safe_context[k] = v
-
-        # Add random function for dice rolls and similar mechanics
-        import random
-        safe_context['random'] = random.randint
-
-        # Evaluate the expression in the restricted environment
-        try:
-            return eval(expression, {"__builtins__": {}}, safe_context)
-        except (NameError, TypeError, SyntaxError, ZeroDivisionError) as e:
-            # Log expected evaluation errors (invalid syntax, undefined variables, etc.)
-            logger.error(f"Error evaluating expression '{expression}': {e}")
-            return 0
-        except Exception as e:
-            # Catch any unexpected errors during evaluation
-            logger.error(f"Unexpected error evaluating expression '{expression}': {e}")
-            return 0
+        
+        return {'success': True, 'message': message, 'actions': actions}

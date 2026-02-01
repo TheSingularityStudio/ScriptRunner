@@ -64,23 +64,7 @@ def main():
         logger.error(f"Script error: {e}")
         logger.error(f"脚本错误: {e}")
         sys.exit(1)
-    except KeyboardInterrupt:
-        logger.info("Game interrupted by user")
-        print("\n\n游戏已中断。")
-        # 尝试保存游戏状态
-        try:
-            # 获取 state_manager 来保存游戏状态
-            state_manager = container.get('state_manager')
-            if state_manager:
-                state_manager.save_game()
-                logger.info("Game state saved successfully")
-                print("游戏状态已保存。")
-            else:
-                logger.warning("State manager not available, cannot save game")
-        except Exception as save_error:
-            logger.error(f"Failed to save game state: {save_error}")
-            print(f"保存游戏状态失败: {save_error}")
-        sys.exit(0)
+
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         logger.error(f"意外错误: {e}")

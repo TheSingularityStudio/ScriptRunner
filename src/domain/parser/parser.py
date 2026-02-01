@@ -24,6 +24,8 @@ class ScriptParser(IScriptParser):
         self.state_machines = {}  # DSL state machines
         self.effects = {}  # DSL effects
         self.commands = {}  # DSL commands
+        self.interaction = {}  # DSL interaction
+        self.meta = {}  # DSL meta
 
     def load_script(self, file_path: str) -> Dict[str, Any]:
         """加载并解析YAML脚本文件，支持DSL语法。"""
@@ -102,6 +104,12 @@ class ScriptParser(IScriptParser):
             if 'effects' in self.script_data:
                 logger.debug("Parsing DSL effects")
                 self._parse_effects()
+            if 'interaction' in self.script_data:
+                logger.debug("Parsing DSL interaction")
+                self._parse_interaction()
+            if 'meta' in self.script_data:
+                logger.debug("Parsing DSL meta")
+                self._parse_meta()
             logger.debug("DSL structures parsed successfully")
         except Exception as e:
             logger.error(f"Failed to parse DSL structures: {str(e)}")
@@ -140,6 +148,14 @@ class ScriptParser(IScriptParser):
     def _parse_commands(self):
         """解析命令定义。"""
         self.commands = self.script_data['commands']
+
+    def _parse_interaction(self):
+        """解析互动系统。"""
+        self.interaction = self.script_data['interaction']
+
+    def _parse_meta(self):
+        """解析元数据。"""
+        self.meta = self.script_data['meta']
 
     def get_scene(self, scene_id: str) -> Dict[str, Any]:
         """通过ID获取特定场景，支持DSL和传统格式。"""
@@ -186,6 +202,10 @@ class ScriptParser(IScriptParser):
     def get_meta_data(self) -> Dict[str, Any]:
         """获取元数据。"""
         return self.script_data.get('meta', {})
+
+    def get_interaction_data(self) -> Dict[str, Any]:
+        """获取互动数据。"""
+        return self.interaction
 
     def get_effect(self, effect_name: str) -> Dict[str, Any]:
         """获取效果定义。"""

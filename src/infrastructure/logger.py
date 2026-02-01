@@ -79,7 +79,7 @@ class Logger:
                 },
                 'file': {
                     'class': 'logging.handlers.TimedRotatingFileHandler',
-                    'level': 'DEBUG',
+                    'level': 'INFO',
                     'formatter': 'standard',
                     'filename': log_file,
                     'when': 'midnight',
@@ -89,12 +89,12 @@ class Logger:
                 }
             },
             'root': {
-                'level': 'DEBUG',
+                'level': 'INFO',
                 'handlers': ['console', 'file']
             },
             'loggers': {
                 'scriptrunner': {
-                    'level': 'DEBUG',
+                    'level': 'INFO',
                     'handlers': ['console', 'file'],
                     'propagate': propagate
                 }

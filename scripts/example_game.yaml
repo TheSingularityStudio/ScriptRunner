@@ -147,12 +147,12 @@ event_system:
         - "location = 'forest_path'"       # 必须在森林小路上
         - "perception_check > 15"          # 感知技能检查
       actions:                             # 要执行的动作
-        - "spawn_object: 'hidden_cache'"   # 生成隐藏宝藏对象
-        - "log: '你在树根下发现了一些东西...'"  # 向玩家记录消息
+        - spawn_object: 'hidden_cache'   # 生成隐藏宝藏对象
+        - log: '你在树根下发现了一些东西...'  # 向玩家记录消息
     - trigger: "world.moon_phase = 'full'"  # 在满月时触发
       actions:
-        - "transform: werewolf.human -> werewolf.beast"  # 变换狼人
-        - "broadcast: '远处传来狼嚎声...'"              # 广播消息
+        - transform: werewolf.human -> werewolf.beast  # 变换狼人
+        - broadcast: '远处传来狼嚎声...'              # 广播消息
 
 command_parser:
   verbs:
@@ -233,11 +233,15 @@ commands:
     description: "攻击目标"
     actions:
       - message: "你准备攻击..."
-      - attack_target
+      - attack
   search:
     description: "搜索当前区域"
     actions:
       - search_location
+  spawn_object:
+    description: "生成对象"
+    actions:
+      - spawn_object
 
 # 互动系统定义复杂的玩家互动
 interaction:
@@ -474,7 +478,7 @@ locations:
       钥匙上刻着奇怪的符号。
     commands:
       - set: "has_key = true"
-      - add_flag: "has_opened_chest"
+      - set_flag: "has_opened_chest"
     choices:
       - text: "拿起钥匙"
         next: "village_square"

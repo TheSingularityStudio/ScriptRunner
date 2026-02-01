@@ -18,7 +18,7 @@ class ExecutionEngine(IExecutionEngine):
                  choice_processor: IChoiceProcessor, input_handler: IInputHandler,
                  event_manager: IEventManager, effects_manager: IEffectsManager,
                  state_machine_manager: IStateMachineManager, meta_manager: IMetaManager,
-                 random_manager: IRandomManager):
+                 random_manager: IRandomManager, interaction_manager=None):
         self.parser = parser
         self.state = state_manager
         self.scene_executor = scene_executor
@@ -30,6 +30,7 @@ class ExecutionEngine(IExecutionEngine):
         self.state_machine_manager = state_machine_manager
         self.meta_manager = meta_manager
         self.random_manager = random_manager
+        self.interaction_manager = interaction_manager
 
         # Pass event_manager and condition_evaluator to input_handler
         input_handler.event_manager = self.event_manager

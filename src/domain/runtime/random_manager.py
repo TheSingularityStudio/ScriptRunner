@@ -285,3 +285,122 @@ class RandomManager(IRandomManager):
     def get_random_from_table(self, table_name: str) -> Any:
         """从随机表获取随机值。"""
         return self.roll_weighted_table(table_name)
+
+    def generate_procedural_content(self, generation_type: str, **kwargs) -> Dict[str, Any]:
+        """生成程序化内容。"""
+        procedural_data = self.parser.get_random_table_data().get('procedural', {})
+
+        if generation_type not in procedural_data:
+            logger.warning(f"Procedural generation type '{generation_type}' not found")
+            return {}
+
+        gen_config = procedural_data[generation_type]
+
+        if generation_type == 'dungeon_room':
+            return self._generate_dungeon_room(gen_config, **kwargs)
+        elif generation_type == 'npc_personality':
+            return self._generate_npc_personality(gen_config, **kwargs)
+        elif generation_type == 'quest_generation':
+            return self._generate_quest(gen_config, **kwargs)
+        else:
+            logger.warning(f"Unknown procedural generation type: {generation_type}")
+            return {}
+
+    def _generate_dungeon_room(self, config: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """生成地牢房间。"""
+        algorithm = config.get('algorithm', 'cellular_automata')
+        params = config.get('parameters', {})
+
+        if algorithm == 'cellular_automata':
+            size = params.get('size', '10x10')
+            width, height = map(int, size.split('x'))
+            wall_density = params.get('wall_density', 0.45)
+            iterations = params.get('iterations', 4)
+
+            # 简单的细胞自动机实现
+            grid = self._generate_cellular_automata(width, height, wall_density, iterations)
+
+            return {
+                'type': 'dungeon_room',
+                'size': (width, height),
+                'grid': grid,
+                'description': f"一个 {width}x{height} 的地牢房间。"
+            }
+        else:
+            return {'type': 'dungeon_room', 'description': "生成失败。"}
+
+    def _generate_cellular_automata(self, width: int, height: int, wall_density: float, iterations: int) -> List[List[int]]:
+        """生成细胞自动机网格。"""
+        # 初始化网格
+        grid = [[1 if random.random() < wall_density else 0 for _ in range(width)] for _ in range(height)]
+
+        for _ in range(iterations):
+            new_grid = [[0 for _ in range(width)] for _ in range(height)]
+            for y in range(height):
+                for x in range(width):
+                    neighbors = self._count_neighbors(grid, x, y, width, height)
+                    if grid[y][x] == 1:
+                        new_grid[y][x] = 1 if neighbors >= 4 else 0
+                    else:
+                        new_grid[y][x] = 1 if neighbors >= 5 else 0
+            grid = new_grid
+
+        return grid
+
+    def _count_neighbors(self, grid: List[List[int]], x: int, y: int, width: int, height: int) -> int:
+        """计算邻居数量。"""
+        count = 0
+        for dy in [-1, 0, 1]:
+            for dx in [-1, 0, 1]:
+                if dx == 0 and dy == 0:
+                    continue
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < width and 0 <= ny < height:
+                    count += grid[ny][nx]
+        return count
+
+    def _generate_npc_personality(self, config: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """生成NPC个性特征。"""
+        traits = config.get('traits', [])
+
+        personality = {}
+        for trait in traits:
+            dimension = trait['dimension']
+            range_str = trait['range']
+            if '-' in range_str:
+                min_val, max_val = map(float, range_str.split('-'))
+                personality[dimension] = random.uniform(min_val, max_val)
+            else:
+                personality[dimension] = float(range_str)
+
+        return {
+            'type': 'npc_personality',
+            'traits': personality
+        }
+
+    def _generate_quest(self, config: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """生成动态任务。"""
+        templates = config.get('templates', [])
+        parameters = config.get('parameters', {})
+
+        if not templates:
+            return {'type': 'quest', 'description': "无可用模板。"}
+
+        # 随机选择模板
+        template = random.choice(templates)
+
+        # 替换参数
+        quest_text = template['template']
+        for param, values in parameters.items():
+            if isinstance(values, list):
+                replacement = random.choice(values)
+            else:
+                replacement = str(values)
+            quest_text = quest_text.replace(f"{{{param}}}", replacement)
+
+        return {
+            'type': 'quest',
+            'template_type': template['type'],
+            'objective': quest_text,
+            'difficulty': random.randint(1, 5)  # 简单难度计算
+        }

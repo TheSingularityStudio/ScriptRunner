@@ -71,6 +71,9 @@ class ApplicationInitializer:
         # 注册命令执行器
         self.container.register_factory('command_executor', self._create_command_executor)
 
+        # 注册动作执行器
+        self.container.register_factory('action_executor', self._create_action_executor)
+
         # 注册场景执行器
         self.container.register_factory('scene_executor', self._create_scene_executor)
 
@@ -95,6 +98,9 @@ class ApplicationInitializer:
         # 注册随机管理器
         self.container.register_factory('random_manager', self._create_random_manager)
 
+        # 注册互动管理器
+        self.container.register_factory('interaction_manager', self._create_interaction_manager)
+
         # 注册执行引擎
         self.container.register_factory('execution_engine', self._create_execution_engine)
 
@@ -115,6 +121,13 @@ class ApplicationInitializer:
         plugin_manager = self.container.get('plugin_manager')
         return ScriptCommandExecutor(parser, state_manager, condition_evaluator, plugin_manager)
 
+    def _create_action_executor(self):
+        """创建动作执行器的工厂函数。"""
+        state_manager = self.container.get('state_manager')
+        command_executor = self.container.get('command_executor')
+        from src.domain.runtime.action_executor import ActionExecutor
+        return ActionExecutor(state_manager, command_executor)
+
     def _create_scene_executor(self):
         """创建场景执行器的工厂函数。"""
         parser = self.container.get('parser')
@@ -128,14 +141,12 @@ class ApplicationInitializer:
         parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
         command_executor = self.container.get('command_executor')
-        return ChoiceProcessor(parser, state_manager, command_executor)
+        condition_evaluator = self.container.get('condition_evaluator')
+        return ChoiceProcessor(parser, state_manager, command_executor, condition_evaluator)
 
     def _create_input_handler(self):
         """创建输入处理器的工厂函数。"""
-        parser = self.container.get('parser')
-        state_manager = self.container.get('state_manager')
-        command_executor = self.container.get('command_executor')
-        return InputHandler(parser, state_manager, command_executor)
+        return InputHandler(self.container, self.config)
 
     def _create_event_manager(self):
         """创建事件管理器的工厂函数。"""
@@ -173,6 +184,13 @@ class ApplicationInitializer:
         state_manager = self.container.get('state_manager')
         return RandomManager(parser, state_manager)
 
+    def _create_interaction_manager(self):
+        """创建互动管理器的工厂函数。"""
+        parser = self.container.get('parser')
+        state_manager = self.container.get('state_manager')
+        condition_evaluator = self.container.get('condition_evaluator')
+        return __import__('src.domain.runtime.interaction_manager', fromlist=['InteractionManager']).InteractionManager(parser, state_manager, condition_evaluator)
+
     def _create_execution_engine(self):
         """创建执行引擎的工厂函数。"""
         parser = self.container.get('parser')
@@ -187,10 +205,13 @@ class ApplicationInitializer:
         state_machine_manager = self.container.get('state_machine_manager')
         meta_manager = self.container.get('meta_manager')
         random_manager = self.container.get('random_manager')
-        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler, event_manager, effects_manager, state_machine_manager, meta_manager, random_manager)
+        interaction_manager = self.container.get('interaction_manager')
+        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler, event_manager, effects_manager, state_machine_manager, meta_manager, random_manager, interaction_manager)
 
         # 设置输入处理器的事件管理器引用
         input_handler.event_manager = execution_engine.event_manager
+        input_handler.condition_evaluator = execution_engine.condition_evaluator
+        input_handler.interaction_manager = execution_engine.interaction_manager
 
         return execution_engine
 

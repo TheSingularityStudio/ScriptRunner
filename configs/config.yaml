@@ -10,6 +10,22 @@ logging:
 game:
   save_file: game_save.json  # 游戏存档文件路径
   auto_save: true  # 是否启用自动保存
+  default_creature_health: 30  # 默认生物生命值
+  base_damage: 5  # 基础伤害
+  strength_damage_multiplier: 0.5  # 力量伤害倍数
+  combine_recipes:  # 组合配方
+    herb_potion: ['herb', 'bottle']
+    sword_dagger: ['sword', 'dagger']
+
+# 消息配置
+messages:
+  unknown_action: "我不理解这个命令。"
+  take_success: "你拿起了 {target}。"
+  defeat_success: "你击败了 {target}！"
+  attack_success: "你攻击了 {target}，造成了 {damage} 点伤害，它还剩下 {health} 点生命。"
+  combine_success: "你成功组合出了 {result}！"
+  inventory_empty: "你的背包是空的。"
+  inventory_header: "你的背包中有："
 
 # 用户界面配置
 ui:

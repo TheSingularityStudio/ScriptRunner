@@ -65,6 +65,18 @@ class TestIntegration:
             mock_plugin_manager = Mock()
             mock_plugin_manager.get_plugins_by_type.return_value = []
             command_executor = ScriptCommandExecutor(parser, state_manager, condition_evaluator, mock_plugin_manager)
+            
+            # Mock the actions
+            def mock_set_variable(command_value, context):
+                name = command_value.get('name')
+                value = command_value.get('value')
+                if name is not None and value is not None:
+                    context['state'].set_variable(name, value)
+                return []
+            command_executor.actions = {
+                'set_variable': mock_set_variable,
+            }
+            
             scene_executor = SceneExecutor(parser, state_manager, command_executor, condition_evaluator)
 
             # Mock choice processor and input handler
