@@ -141,7 +141,8 @@ class ApplicationInitializer:
         parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
         command_executor = self.container.get('command_executor')
-        return ChoiceProcessor(parser, state_manager, command_executor)
+        condition_evaluator = self.container.get('condition_evaluator')
+        return ChoiceProcessor(parser, state_manager, command_executor, condition_evaluator)
 
     def _create_input_handler(self):
         """创建输入处理器的工厂函数。"""

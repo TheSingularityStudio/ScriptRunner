@@ -122,7 +122,7 @@ class TestScriptExecution:
         command_executor = ScriptCommandExecutor(parser, state_manager, condition_evaluator, mock_plugin_manager)
         scene_executor = SceneExecutor(parser, state_manager, command_executor, condition_evaluator)
 
-        choice_processor = ChoiceProcessor(parser, state_manager, command_executor)
+        choice_processor = ChoiceProcessor(parser, state_manager, command_executor, condition_evaluator)
         input_handler = Mock()
 
         # Initialize managers

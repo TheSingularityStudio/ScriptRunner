@@ -23,7 +23,11 @@ class TestCommandExecutor:
             self.mock_plugin_manager
         )
         # Mock the actions dict to include core actions
-        def mock_parse_and_set(parser, state, condition_evaluator, expression):
+        def mock_parse_and_set(command_value, context):
+            expression = command_value
+            parser = context['parser']
+            state = context['state']
+            condition_evaluator = context['condition_evaluator']
             if '=' not in expression:
                 return []
             key, value_str = expression.split('=', 1)
@@ -44,52 +48,52 @@ class TestCommandExecutor:
             state.set_variable(key, value)
             return []
 
-        def mock_set_variable(parser, state, condition_evaluator, command_value):
+        def mock_set_variable(command_value, context):
             name = command_value.get('name')
             value = command_value.get('value')
             if name is not None and value is not None:
-                state.set_variable(name, value)
+                context['state'].set_variable(name, value)
             return []
 
-        def mock_set_flag(parser, state, condition_evaluator, flag_name):
-            state.set_flag(flag_name)
+        def mock_set_flag(command_value, context):
+            context['state'].set_flag(command_value)
             return []
 
-        def mock_clear_flag(parser, state, condition_evaluator, flag_name):
-            state.clear_flag(flag_name)
+        def mock_clear_flag(command_value, context):
+            context['state'].clear_flag(command_value)
             return []
 
-        def mock_apply_effect(parser, state, condition_evaluator, effect_name):
-            effect = parser.get_effect(effect_name)
+        def mock_apply_effect(command_value, context):
+            effect = context['parser'].get_effect(command_value)
             if effect:
-                state.apply_effect(effect_name, effect)
+                context['state'].apply_effect(command_value, effect)
             return []
 
-        def mock_remove_effect(parser, state, condition_evaluator, effect_name):
-            state.remove_effect(effect_name)
+        def mock_remove_effect(command_value, context):
+            context['state'].remove_effect(command_value)
             return []
 
-        def mock_goto(parser, state, condition_evaluator, scene_id):
-            state.set_current_scene(scene_id)
+        def mock_goto(command_value, context):
+            context['state'].set_current_scene(command_value)
             return []
 
-        def mock_if(parser, state, condition_evaluator, command):
-            condition = command.get('if')
-            then_commands = command.get('then', [])
-            else_commands = command.get('else', [])
-            if condition_evaluator.evaluate_condition(condition):
+        def mock_if(command_value, context):
+            condition = command_value.get('if')
+            then_commands = command_value.get('then', [])
+            else_commands = command_value.get('else', [])
+            if context['condition_evaluator'].evaluate_condition(condition):
                 # For test, just evaluate condition
                 pass
             return []
 
-        def mock_message(parser, state, condition_evaluator, message):
-            return [message]
+        def mock_message(command_value, context):
+            return [command_value]
 
-        def mock_spawn_object(parser, state, condition_evaluator, object_name):
+        def mock_spawn_object(command_value, context):
             return []
 
-        def mock_roll_table(parser, state, condition_evaluator, table_name):
-            table = parser.get_random_table(table_name)
+        def mock_roll_table(command_value, context):
+            table = context['parser'].get_random_table(command_value)
             if table:
                 pass  # mock
             return []
@@ -231,7 +235,7 @@ class TestCommandExecutor:
             self.mock_plugin_manager
         )
 
-        self.mock_parser.get_command.return_value = {'actions': ['message', 'attack_target'], 'message': '你准备攻击...'}
+        self.mock_parser.get_command.return_value = {'actions': [{'message': '你准备攻击...'}, 'attack_target']}
         command = {'attack': 'goblin'}
         messages = self.executor.execute_command(command)
         assert len(messages) == 2
@@ -255,7 +259,7 @@ class TestCommandExecutor:
             self.mock_plugin_manager
         )
 
-        self.mock_parser.get_command.return_value = {'actions': ['message', 'attack_target'], 'message': '你准备攻击...'}
+        self.mock_parser.get_command.return_value = {'actions': [{'message': '你准备攻击...'}, 'attack_target']}
         command = {'attack': 'goblin'}
         messages = self.executor.execute_command(command)
         assert len(messages) == 2

@@ -147,12 +147,12 @@ event_system:
         - "location = 'forest_path'"       # 必须在森林小路上
         - "perception_check > 15"          # 感知技能检查
       actions:                             # 要执行的动作
-        - "spawn_object: 'hidden_cache'"   # 生成隐藏宝藏对象
-        - "log: '你在树根下发现了一些东西...'"  # 向玩家记录消息
+        - spawn_object: 'hidden_cache'   # 生成隐藏宝藏对象
+        - log: '你在树根下发现了一些东西...'  # 向玩家记录消息
     - trigger: "world.moon_phase = 'full'"  # 在满月时触发
       actions:
-        - "transform: werewolf.human -> werewolf.beast"  # 变换狼人
-        - "broadcast: '远处传来狼嚎声...'"              # 广播消息
+        - transform: werewolf.human -> werewolf.beast  # 变换狼人
+        - broadcast: '远处传来狼嚎声...'              # 广播消息
 
 command_parser:
   verbs:
