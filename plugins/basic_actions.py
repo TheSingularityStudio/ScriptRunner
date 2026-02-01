@@ -31,22 +31,27 @@ class BasicActionsPlugin(ActionPlugin):
         """关闭插件。"""
         logger.info("BasicActions plugin shutdown")
 
-    def get_actions(self) -> Dict[str, Callable]:
+    def get_actions(self) -> Dict[str, Callable[[str, Dict[str, Any]], Dict[str, Any]]]:
         """返回此插件提供的动作。"""
         return {
-            'attack_target': self._execute_attack,
-            'search_location': self._execute_search,
+            'attack': self._execute_attack,
+            'search': self._execute_search,
             'roll_table': self._execute_roll_table,
         }
 
-    def _execute_attack(self, parser, state, condition_evaluator, target: str) -> List[str]:
-        """执行攻击命令并返回消息。"""
+    def _execute_attack(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行攻击命令并返回结果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
         messages = []
+        actions = []
         # 获取目标对象
         target_obj = parser.get_object(target)
         if not target_obj:
             logger.warning(f"Attack target not found: {target}")
-            return messages
+            return {'success': False, 'message': f"无法找到攻击目标 {target}", 'actions': []}
 
         target_attrs = target_obj.get('attributes', {})
         behaviors = target_obj.get('behaviors', {})
@@ -78,8 +83,12 @@ class BasicActionsPlugin(ActionPlugin):
             health_attr = attack_behavior.get('health_attribute', 'health')
             states = target_obj.get('states', [])
             for state in states:
-                if state['name'] == health_attr:
+                state_name = state.get('name', 'health')  # 默认使用health
+                if state_name == health_attr:
+                    old_value = state['value']
                     state['value'] = max(0, state['value'] - damage)
+                    # 添加设置变量的动作
+                    actions.append(f"set:{target}_{health_attr}={state['value']}")
                     break
 
             # 成功消息
@@ -108,36 +117,44 @@ class BasicActionsPlugin(ActionPlugin):
             counter_damage_msg = counter_damage_msg.replace('{counter_damage}', str(counter_damage))
             messages.append(counter_damage_msg)
             logger.debug(f"Player took {counter_damage} counter damage")
-        return messages
+        
+        return {'success': True, 'message': '\n'.join(messages), 'actions': actions}
 
-    def _execute_search(self, parser, state, condition_evaluator, location: str) -> List[str]:
-        """执行搜索命令并返回消息。"""
+    def _execute_search(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行搜索命令并返回结果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
         messages = []
-        logger.info(f"Searching {location}...")
+        logger.info(f"Searching {target}...")
 
         # 动态构建搜索表名称，例如 {location}_search
-        table_name = f"{location}_search"
+        table_name = f"{target}_search"
         table = parser.get_random_table(table_name)
         if table:
-            messages.extend(self._execute_roll_table(parser, state, condition_evaluator, table_name))
+            result = self._execute_roll_table(table_name, context)
+            return result
         else:
-            msg = f"No items found while searching {location}."
-            messages.append(msg)
-            logger.info(msg)
-        return messages
+            msg = f"你搜索了{target}，但没有发现什么特别的东西。"
+            return {'success': True, 'message': msg, 'actions': []}
 
-    def _execute_roll_table(self, parser, state, condition_evaluator, table_name: str) -> List[str]:
-        """执行随机表掷骰并返回消息。"""
+    def _execute_roll_table(self, table_name: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行随机表掷骰并返回结果。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+        
         messages = []
         table = parser.get_random_table(table_name)
         if not table:
             logger.warning(f"Random table not found: {table_name}")
-            return messages
+            return {'success': False, 'message': f"找不到随机表 {table_name}", 'actions': []}
 
         entries = table.get('entries', [])
         if not entries:
             logger.warning(f"Random table {table_name} has no entries")
-            return messages
+            return {'success': False, 'message': f"随机表 {table_name} 为空", 'actions': []}
 
         import random
         # 随机选择条目
@@ -145,12 +162,20 @@ class BasicActionsPlugin(ActionPlugin):
         logger.debug(f"Rolled table {table_name}: {result}")
 
         # 如果结果有消息，添加消息
+        message = ""
         if isinstance(result, dict) and 'message' in result:
-            messages.append(result['message'])
+            message = result['message']
 
         # 如果结果有命令，执行它们
+        actions = []
         if isinstance(result, dict) and 'commands' in result:
-            # 注意：这需要访问执行器来执行命令
-            # 目前仅记录将要执行的命令
+            # 将命令转换为DSL动作
+            for cmd in result['commands']:
+                if 'set_flag' in cmd:
+                    actions.append(f"add_flag:{cmd['set_flag']}")
+                elif 'set' in cmd:
+                    actions.append(f"set:{cmd['set']}")
+                # 其他命令可以扩展
             logger.debug(f"Would execute commands: {result['commands']}")
-        return messages
+        
+        return {'success': True, 'message': message, 'actions': actions}

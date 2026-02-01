@@ -70,13 +70,14 @@ def main():
         # 尝试保存游戏状态
         try:
             # 获取 state_manager 来保存游戏状态
-            state_manager = container.get('state_manager')
-            if state_manager:
+            if container.has('state_manager'):
+                state_manager = container.get('state_manager')
                 state_manager.save_game()
                 logger.info("Game state saved successfully")
                 print("游戏状态已保存。")
             else:
                 logger.warning("State manager not available, cannot save game")
+                print("状态管理器不可用，无法保存游戏状态。")
         except Exception as save_error:
             logger.error(f"Failed to save game state: {save_error}")
             print(f"保存游戏状态失败: {save_error}")

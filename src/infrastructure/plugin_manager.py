@@ -65,10 +65,12 @@ class PluginManager:
             # 在模块中查找插件类
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
+                logger.debug(f"Checking attribute {attr_name}: {attr}")
                 if (isinstance(attr, type) and
                     issubclass(attr, PluginInterface) and
                     attr != PluginInterface and
-                    not hasattr(attr, '__abstractmethods__')):  # 确保不是抽象类
+                    (not hasattr(attr, '__abstractmethods__') or not attr.__abstractmethods__)):
+                    logger.debug(f"Found plugin class: {attr}")
                     plugin_instance = attr()
                     self.register_plugin(plugin_instance.name, plugin_instance)
                     logger.debug(f"Loaded plugin: {plugin_instance.name}")
@@ -116,15 +118,8 @@ class PluginManager:
 
     def _get_plugin_context(self) -> Dict[str, Any]:
         """获取在初始化期间传递给插件的上下文。"""
-        # 在此处导入以避免循环导入
-        from .container import container
-        from config import config
-
-        return {
-            'container': container,
-            'config': config,
-            'logger': logger
-        }
+        # 插件初始化时不需要上下文，延迟到动作执行时提供
+        return {}
 
     def shutdown_all(self):
         """关闭所有插件。"""

@@ -4,7 +4,7 @@ ScriptRunner 的插件接口。
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable
 
 
 class PluginInterface(ABC):
@@ -98,8 +98,8 @@ class ActionPlugin(PluginInterface):
     """用于提供便利动作函数的插件。"""
 
     @abstractmethod
-    def get_actions(self) -> Dict[str, callable]:
-        """返回此插件提供的动作函数。"""
+    def get_actions(self) -> Dict[str, Callable[[str, Dict[str, Any]], Dict[str, Any]]]:
+        """返回此插件提供的动作函数。动作函数接受(target, context)，返回包含success, message, actions的字典。"""
         pass
 
 

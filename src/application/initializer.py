@@ -145,14 +145,7 @@ class ApplicationInitializer:
 
     def _create_input_handler(self):
         """创建输入处理器的工厂函数。"""
-        parser = self.container.get('parser')
-        state_manager = self.container.get('state_manager')
-        command_executor = self.container.get('command_executor')
-        event_manager = self.container.get('event_manager')
-        condition_evaluator = self.container.get('condition_evaluator')
-        interaction_manager = self.container.get('interaction_manager')
-        action_executor = self.container.get('action_executor')
-        return InputHandler(parser, state_manager, command_executor, event_manager, condition_evaluator, interaction_manager, action_executor)
+        return InputHandler(self.container, self.config)
 
     def _create_event_manager(self):
         """创建事件管理器的工厂函数。"""
