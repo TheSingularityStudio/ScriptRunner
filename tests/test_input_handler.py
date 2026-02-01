@@ -15,12 +15,14 @@ class TestInputHandler:
         self.mock_command_executor = Mock()
         self.mock_event_manager = Mock()
         self.mock_condition_evaluator = Mock()
+        self.mock_action_executor = Mock()
         self.handler = InputHandler(
             self.mock_parser,
             self.mock_state_manager,
             self.mock_command_executor,
             self.mock_event_manager,
-            self.mock_condition_evaluator
+            self.mock_condition_evaluator,
+            action_executor=self.mock_action_executor
         )
 
     def test_initialization(self):
@@ -102,7 +104,9 @@ class TestInputHandler:
                 result = self.handler._execute_take('sword')
         assert result['success'] is True
         assert '拿起了' in result['message']
-        self.mock_state_manager.set_variable.assert_called()
+        assert len(result['actions']) == 2
+        assert 'set:inventory=' in result['actions'][0]
+        assert 'add_flag:removed_sword' in result['actions'][1]
 
     def test_execute_use_no_target(self):
         """测试使用物品无目标。"""
@@ -169,6 +173,8 @@ class TestInputHandler:
             result = self.handler._execute_attack('goblin')
         assert result['success'] is True
         assert '攻击了' in result['message']
+        assert len(result['actions']) == 1
+        assert 'set:goblin_health=' in result['actions'][0]
 
     def test_execute_search_no_scene(self):
         """测试搜索无场景。"""
@@ -201,6 +207,8 @@ class TestInputHandler:
         result = self.handler._execute_combine('herb_potion')
         assert result['success'] is True
         assert '成功组合' in result['message']
+        assert len(result['actions']) == 1
+        assert 'set:inventory=' in result['actions'][0]
 
     def test_is_object_accessible_no_scene(self):
         """测试对象可访问性无场景。"""

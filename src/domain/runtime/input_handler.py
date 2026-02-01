@@ -13,12 +13,14 @@ logger = get_logger(__name__)
 class InputHandler(IInputHandler):
     """处理玩家的自然语言输入。"""
 
-    def __init__(self, parser, state_manager, command_executor, event_manager=None, condition_evaluator=None):
+    def __init__(self, parser, state_manager, command_executor, event_manager=None, condition_evaluator=None, interaction_manager=None, action_executor=None):
         self.parser = parser
         self.state = state_manager
         self.command_executor = command_executor
         self.event_manager = event_manager
         self.condition_evaluator = condition_evaluator
+        self.interaction_manager = interaction_manager
+        self.action_executor = action_executor
 
         # 可扩展的动作注册表
         self.action_handlers = {
@@ -81,7 +83,15 @@ class InputHandler(IInputHandler):
         # 使用可扩展的动作处理器
         handler = self.action_handlers.get(action)
         if handler:
-            return handler(target)
+            result = handler(target)
+            # 如果有action_executor且有actions，执行它们
+            if self.action_executor and result.get('actions'):
+                try:
+                    self.action_executor.execute_actions(result['actions'])
+                except Exception as e:
+                    logger.error(f"Error executing actions for {action}: {e}")
+                    return {'success': False, 'message': f"执行动作 '{action}' 时出错。"}
+            return {'success': result['success'], 'message': result['message']}
         else:
             return {
                 'success': False,
@@ -96,67 +106,69 @@ class InputHandler(IInputHandler):
     def _execute_take(self, target: str) -> Dict[str, Any]:
         """执行拿起物品动作。"""
         if not target:
-            return {'success': False, 'message': "需要指定要拿起的物品。"}
+            return {'success': False, 'message': "需要指定要拿起的物品。", 'actions': []}
 
         # 检查物品是否存在且可访问
         obj = self.parser.get_object(target)
         if not obj:
-            return {'success': False, 'message': f"这里没有 {target}。"}
+            return {'success': False, 'message': f"这里没有 {target}。", 'actions': []}
 
         if not self._is_object_accessible(target):
-            return {'success': False, 'message': f"这里没有 {target}。"}
+            return {'success': False, 'message': f"这里没有 {target}。", 'actions': []}
 
         # 检查是否为可拿取物品
         if obj.get('type') not in ['item', 'loot']:
-            return {'success': False, 'message': f"你无法拿起 {target}。"}
+            return {'success': False, 'message': f"你无法拿起 {target}。", 'actions': []}
 
-        # 添加到玩家库存
+        # 检查是否已经在库存中
         inventory = self.state.get_variable('inventory', [])
-        if target not in inventory:
-            inventory.append(target)
-            self.state.set_variable('inventory', inventory)
-            # 从场景中移除物品
-            self._remove_object_from_scene(target)
-            return {'success': True, 'message': f"你拿起了 {target}。"}
+        if target in inventory:
+            return {'success': False, 'message': f"你已经拿起了 {target}。", 'actions': []}
 
-        return {'success': False, 'message': f"你已经拿起了 {target}。"}
+        # 构建DSL动作
+        actions = [
+            f"set:inventory={inventory + [target]}",  # 添加到库存
+            f"add_flag:removed_{target}"  # 标记为已移除
+        ]
+
+        return {'success': True, 'message': f"你拿起了 {target}。", 'actions': actions}
 
     def _execute_use(self, target: str) -> Dict[str, Any]:
         """执行使用物品动作。"""
         if not target:
-            return {'success': False, 'message': "需要指定要使用的物品。"}
+            return {'success': False, 'message': "需要指定要使用的物品。", 'actions': []}
 
         inventory = self.state.get_variable('inventory', [])
         if target not in inventory:
-            return {'success': False, 'message': f"你没有 {target}。"}
+            return {'success': False, 'message': f"你没有 {target}。", 'actions': []}
 
         # 简单的使用逻辑（可以扩展）
-        return {'success': True, 'message': f"你使用了 {target}。"}
+        return {'success': True, 'message': f"你使用了 {target}。", 'actions': []}
 
     def _execute_examine(self, target: str) -> Dict[str, Any]:
         """执行检查物品动作。"""
         if not target:
-            return {'success': False, 'message': "需要指定要检查的物品。"}
+            return {'success': False, 'message': "需要指定要检查的物品。", 'actions': []}
 
         obj = self.parser.get_object(target)
         if not obj:
-            return {'success': False, 'message': f"这里没有 {target}。"}
+            return {'success': False, 'message': f"这里没有 {target}。", 'actions': []}
 
         # 检查是否在场景中或在库存中
         if not (self._is_object_accessible(target) or target in self.state.get_variable('inventory', [])):
-            return {'success': False, 'message': f"这里没有 {target}。"}
+            return {'success': False, 'message': f"这里没有 {target}。", 'actions': []}
 
         description = obj.get('description', f"这是一个 {target}。")
-        return {'success': True, 'message': description}
+        return {'success': True, 'message': description, 'actions': []}
 
     def _execute_attack(self, target: str) -> Dict[str, Any]:
         """执行攻击动作。"""
         if not target:
-            return {'success': False, 'message': "需要指定攻击目标。"}
+            return {'success': False, 'message': "需要指定攻击目标。", 'actions': []}
 
         # 检查目标是否在当前场景中
         if not self._is_object_accessible(target):
-            return {'success': False, 'message': f"这里没有 {target}。"}
+            return {'success': False, 'message': f"这里没有 {target}。", 'actions': []}
 
         obj = self.parser.get_object(target)
         if obj and obj.get('type') == 'creature':
@@ -171,28 +183,28 @@ class InputHandler(IInputHandler):
                 base_damage = 5
                 damage = base_damage + (player_strength // 2)  # 力量每2点加1点伤害
 
-                health -= damage
-                self.state.set_variable(health_var, health)
+                new_health = health - damage
+                actions = [f"set:{health_var}={new_health}"]
 
-                if health <= 0:
-                    # 执行击败逻辑，可能触发事件或命令
-                    self.command_executor.execute_commands([{'set_flag': f"defeated_{target}"}])
-                    return {'success': True, 'message': f"你击败了 {target}！"}
+                if new_health <= 0:
+                    # 执行击败逻辑
+                    actions.append(f"add_flag:defeated_{target}")
+                    return {'success': True, 'message': f"你击败了 {target}！", 'actions': actions}
                 else:
-                    return {'success': True, 'message': f"你攻击了 {target}，造成了 {damage} 点伤害，它还剩下 {health} 点生命。"}
+                    return {'success': True, 'message': f"你攻击了 {target}，造成了 {damage} 点伤害，它还剩下 {new_health} 点生命。", 'actions': actions}
 
-        return {'success': False, 'message': f"无法攻击 {target}。"}
+        return {'success': False, 'message': f"无法攻击 {target}。", 'actions': []}
 
     def _execute_search(self, target: str) -> Dict[str, Any]:
         """执行搜索动作。"""
         current_scene_id = self.state.get_current_scene()
         if not current_scene_id:
-            return {'success': False, 'message': "无法确定当前位置。"}
+            return {'success': False, 'message': "无法确定当前位置。", 'actions': []}
 
         # 获取当前场景
         scene = self.parser.get_scene(current_scene_id)
         if not scene:
-            return {'success': False, 'message': "场景信息不可用。"}
+            return {'success': False, 'message': "场景信息不可用。", 'actions': []}
 
         # 检查是否有随机表用于搜索
         random_table_name = f"{current_scene_id}_search"
@@ -204,30 +216,37 @@ class InputHandler(IInputHandler):
             if entries:
                 result = random.choice(entries)
                 messages = []
+                actions = []
                 if isinstance(result, dict) and 'commands' in result:
-                    # 执行命令并收集消息
-                    command_messages = self.command_executor.execute_commands(result['commands'])
-                    messages.extend(command_messages)
+                    # 将命令转换为DSL动作
+                    for cmd in result['commands']:
+                        if 'set_flag' in cmd:
+                            actions.append(f"add_flag:{cmd['set_flag']}")
+                        elif 'set' in cmd:
+                            actions.append(f"set:{cmd['set']}")
+                        # 其他命令可以扩展
                 base_message = f"你仔细搜索了{target or '周围'}，{result.get('message', '发现了什么东西！')}"
                 messages.insert(0, base_message)
-                return {'success': True, 'message': '\n'.join(messages)}
+                return {'success': True, 'message': '\n'.join(messages), 'actions': actions}
 
         # 检查事件系统是否有搜索相关事件
         # 这里可以扩展为触发事件系统中的搜索事件
 
         # 默认搜索逻辑
-        return {'success': True, 'message': f"你搜索了{target or '周围'}，但没有发现什么特别的东西。"}
+        return {'success': True, 'message': f"你搜索了{target or '周围'}，但没有发现什么特别的东西。", 'actions': []}
 
     def _execute_combine(self, target: str) -> Dict[str, Any]:
         """执行组合物品动作。"""
         if not target:
-            return {'success': False, 'message': "需要指定要组合的物品。"}
+            return {'success': False, 'message': "需要指定要组合的物品。", 'actions': []}
+
+        # 检查是否有对应的多步骤互动
+        if self.interaction_manager:
+            multi_step = self.interaction_manager.interaction_data.get('multi_step', {})
+            if target in multi_step:
+                return self.interaction_manager.start_multi_step_interaction(target)
 
         inventory = self.state.get_variable('inventory', [])
-
-        # 检查是否有交互定义用于组合
-        # 这里可以扩展为使用DSL中的interaction.multi_step定义
-        # 例如，检查是否有craft_potion这样的交互
 
         # 简单的组合逻辑：检查常见组合
         combine_recipes = {
@@ -237,25 +256,19 @@ class InputHandler(IInputHandler):
 
         for result, ingredients in combine_recipes.items():
             if all(item in inventory for item in ingredients):
-                # 移除原料
-                for item in ingredients:
-                    inventory.remove(item)
-                self.state.set_variable('inventory', inventory)
-
-                # 添加结果
-                inventory.append(result)
-                self.state.set_variable('inventory', inventory)
-
-                return {'success': True, 'message': f"你成功组合出了 {result}！"}
+                # 构建动作：移除原料，添加结果
+                new_inventory = [item for item in inventory if item not in ingredients] + [result]
+                actions = [f"set:inventory={new_inventory}"]
+                return {'success': True, 'message': f"你成功组合出了 {result}！", 'actions': actions}
 
         # 如果没有匹配的配方
-        return {'success': False, 'message': f"你尝试组合 {target}，但没有成功。"}
+        return {'success': False, 'message': f"你尝试组合 {target}，但没有成功。", 'actions': []}
 
     def _execute_inventory(self, target: str) -> Dict[str, Any]:
         """执行查看背包动作。"""
         inventory = self.state.get_variable('inventory', [])
         if not inventory:
-            return {'success': True, 'message': "你的背包是空的。"}
+            return {'success': True, 'message': "你的背包是空的。", 'actions': []}
 
         # 获取物品描述
         item_descriptions = []
@@ -268,7 +281,7 @@ class InputHandler(IInputHandler):
                 item_descriptions.append(f"- {item_id}")
 
         message = "你的背包中有：\n" + "\n".join(item_descriptions)
-        return {'success': True, 'message': message}
+        return {'success': True, 'message': message, 'actions': []}
 
     def _is_object_accessible(self, obj_id: str) -> bool:
         """检查对象是否在当前场景中可访问。"""
