@@ -35,6 +35,7 @@ class CoreActionsPlugin(ActionPlugin):
         return {
             'set_variable': self._execute_set_variable,
             'parse_and_set': self._execute_parse_and_set,
+            'set': self._execute_parse_and_set,
             'set_flag': self._execute_set_flag,
             'clear_flag': self._execute_clear_flag,
             'apply_effect': self._execute_apply_effect,

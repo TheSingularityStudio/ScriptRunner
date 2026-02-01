@@ -133,6 +133,11 @@ commands:
     actions:
       - set_flag
 
+  # 设置变量命令 - 解析并设置变量 (用于状态机和效果)
+  set:
+    actions:
+      - parse_and_set
+
 # 效果系统 - 定义游戏中的各种效果
 effects:
   # 力量增益效果
