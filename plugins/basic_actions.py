@@ -88,7 +88,7 @@ class BasicActionsPlugin(ActionPlugin):
                     old_value = state['value']
                     state['value'] = max(0, state['value'] - damage)
                     # 添加设置变量的动作
-                    actions.append(f"set:{target}_{health_attr}={state['value']}")
+                    actions.append(f"parse_and_set:{target}_{health_attr}={state['value']}")
                     break
 
             # 成功消息
@@ -139,11 +139,21 @@ class BasicActionsPlugin(ActionPlugin):
             msg = f"你搜索了{target}，但没有发现什么特别的东西。"
             return {'success': True, 'message': msg, 'actions': []}
 
-    def _execute_roll_table(self, table_name: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute_roll_table(self, table_param: Any, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行随机表掷骰并返回结果。"""
         parser = context['parser']
         state = context['state']
         condition_evaluator = context.get('condition_evaluator')
+        
+        # 处理参数：可以是字符串或字典
+        if isinstance(table_param, dict):
+            table_name = table_param.get('table')
+            result_var = table_param.get('result_var')
+        elif isinstance(table_param, str):
+            table_name = table_param
+            result_var = None
+        else:
+            return {'success': False, 'message': "无效的roll_table参数", 'actions': []}
         
         messages = []
         table = parser.get_random_table(table_name)
@@ -151,10 +161,13 @@ class BasicActionsPlugin(ActionPlugin):
             logger.warning(f"Random table not found: {table_name}")
             return {'success': False, 'message': f"找不到随机表 {table_name}", 'actions': []}
 
-        entries = table.get('entries', [])
-        if not entries:
-            logger.warning(f"Random table {table_name} has no entries")
-            return {'success': False, 'message': f"随机表 {table_name} 为空", 'actions': []}
+        # 处理表格式：可以是dict或list
+        if isinstance(table, dict):
+            entries = table.get('entries', [])
+        elif isinstance(table, list):
+            entries = table
+        else:
+            return {'success': False, 'message': f"随机表 {table_name} 格式错误", 'actions': []}
 
         import random
         # 随机选择条目
@@ -174,8 +187,14 @@ class BasicActionsPlugin(ActionPlugin):
                 if 'set_flag' in cmd:
                     actions.append(f"add_flag:{cmd['set_flag']}")
                 elif 'set' in cmd:
-                    actions.append(f"set:{cmd['set']}")
+                    actions.append(f"parse_and_set:{cmd['set']}")
                 # 其他命令可以扩展
             logger.debug(f"Would execute commands: {result['commands']}")
+        
+        # 如果指定了result_var，设置变量
+        if result_var and isinstance(result, str):
+            actions.append(f"parse_and_set:{result_var}={result}")
+        elif result_var and isinstance(result, dict) and 'item' in result:
+            actions.append(f"parse_and_set:{result_var}={result['item']}")
         
         return {'success': True, 'message': message, 'actions': actions}

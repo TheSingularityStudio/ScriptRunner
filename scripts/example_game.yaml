@@ -14,6 +14,15 @@ world:
   start: "cave_entrance"  # 起始场景ID
   description: "一个充满危险和宝藏的古老洞穴"  # 世界描述
 
+# 玩家属性 - 定义玩家的初始状态和属性
+player:
+  health: 100          # 生命值
+  max_health: 100      # 最大生命值
+  inventory: []        # 初始物品列表
+  flags: []            # 初始标志列表
+  variables:           # 初始变量
+    score: 0           # 分数
+
 # 对象定义 - 定义游戏中的物品、NPC、容器等
 define_object:
   # 武器对象
@@ -54,6 +63,27 @@ define_object:
     healing: 20         # 治疗量
     description: "红色的治疗药水，可以恢复生命值"  # 描述
 
+  # 新增物品
+  magic_crystal:
+    type: "item"         # 物品类型
+    name: "魔法水晶"     # 名称
+    mana_restore: 30    # 魔法恢复
+    description: "蓝色的魔法水晶，可以恢复魔法值"  # 描述
+
+  key:
+    type: "item"         # 物品类型
+    name: "钥匙"         # 名称
+    description: "一把古老的铁钥匙"  # 描述
+
+  # 新增敌人
+  orc:
+    type: "enemy"        # 敌人类型
+    name: "兽人"         # 名称
+    health: 30          # 生命值
+    damage: 8           # 攻击力
+    loot_table: "orc_loot"  # 掉落表
+    description: "一个强壮的绿色兽人"  # 描述
+
 # 命令解析器 - 定义如何解析玩家的自然语言输入
 command_parser:
   verbs:
@@ -77,6 +107,11 @@ command_parser:
       patterns: ["看", "查看", "观察", "检查"]  # 中文模式
       aliases: ["examine", "inspect"]          # 英文别名
 
+    # 查看背包命令
+    inventory:
+      patterns: ["查看背包", "背包", "查看物品"]  # 中文模式
+      aliases: ["inventory", "inv", "bag"]       # 英文别名
+
     # 打开命令
     open:
       patterns: ["打开", "开"]  # 中文模式
@@ -96,6 +131,43 @@ command_parser:
       哥布林: "goblin"       # 哥布林的别名
       金币: "gold"           # 金币的别名
       药水: "health_potion"  # 药水的别名
+
+# 命令定义 - 定义脚本中使用的命令及其执行逻辑
+commands:
+  # 掷骰命令 - 使用随机表系统
+  roll_dice:
+    actions:
+      - roll_table
+
+  # 显示消息命令 - 直接显示消息文本
+  show_message:
+    actions:
+      - message: "{value}"
+
+  # 添加物品命令 - 添加物品到玩家背包
+  add_item:
+    actions:
+      - add_item
+
+  # 设置变量命令 - 设置游戏变量
+  set_variable:
+    actions:
+      - set_variable
+
+  # 添加标志命令 - 设置游戏标志
+  add_flag:
+    actions:
+      - set_flag
+
+  # 设置变量命令 - 解析并设置变量 (用于状态机和效果)
+  set:
+    actions:
+      - parse_and_set
+
+  # 应用效果命令 - 应用效果到玩家
+  apply_effect:
+    actions:
+      - apply_effect
 
 # 效果系统 - 定义游戏中的各种效果
 effects:
@@ -132,6 +204,18 @@ random_system:
         weight: 30            # 权重30%
         count: 1              # 数量1个
 
+    # 兽人掉落表
+    orc_loot:
+      - item: "gold"           # 掉落金币
+        weight: 50            # 权重50%
+        count: [2, 5]         # 数量2-5个
+      - item: "magic_crystal"  # 掉落魔法水晶
+        weight: 30            # 权重30%
+        count: 1              # 数量1个
+      - item: "key"            # 掉落钥匙
+        weight: 20            # 权重20%
+        count: 1              # 数量1个
+
 # 场景定义 - 游戏的主要场景和选择
 locations:
   # 洞穴入口场景
@@ -160,12 +244,14 @@ locations:
 
   # 主房间场景
   main_chamber:
-    description: "你进入了一个宽敞的洞穴主室。房间中央有一个古老的宝箱，角落里似乎有什么东西在动。"
+    description: "你进入了一个宽敞的洞穴主室。房间中央有一个古老的宝箱，角落里似乎有什么东西在动。深处似乎还有一条通道。"
     choices:
       - text: "走向宝箱"
         next: "treasure_approach"  # 接近宝箱
       - text: "调查角落的动静"
         next: "goblin_encounter"   # 遇到哥布林
+      - text: "深入洞穴"
+        next: "orc_encounter"      # 遇到兽人
       - text: "离开房间"
         next: "cave_entrance"      # 返回入口
 
@@ -257,6 +343,70 @@ locations:
           - add_item: "{combat_loot}"  # 添加随机战利品
           - set_variable: {key: "score", value: 50}  # 设置分数
       - text: "离开尸体"
+        next: "main_chamber"  # 返回主室
+
+  # 兽人遭遇场景
+  orc_encounter:
+    description: "你深入洞穴，发现了一个强壮的兽人守卫着一条隐秘的通道。它看起来很危险。"
+    choices:
+      - text: "攻击兽人"
+        next: "orc_combat"  # 兽人战斗
+        condition: "has_flag('has_sword')"  # 条件：有剑
+      - text: "试图绕过兽人"
+        next: "secret_room"  # 秘密房间
+        condition: "has_flag('has_key')"  # 条件：有钥匙
+        commands:
+          - show_message: "你用钥匙悄悄打开了秘密房间的门。"  # 显示消息
+      - text: "逃跑"
+        next: "main_chamber"  # 返回主室
+        commands:
+          - show_message: "你迅速逃回了主室。"  # 显示消息
+
+  # 兽人战斗场景
+  orc_combat:
+    description: "战斗开始了！兽人挥舞着巨大的斧头向你冲来。"
+    choices:
+      - text: "继续战斗"
+        next: "orc_combat_result"  # 战斗结果
+        commands:
+          - roll_dice: {table: "orc_loot", result_var: "orc_loot"}  # 随机掉落
+          - show_message: "你击败了兽人！"  # 显示消息
+      - text: "逃跑"
+        next: "main_chamber"  # 返回主室
+        commands:
+          - apply_effect: "poison"  # 应用中毒效果
+          - show_message: "你在逃跑时被兽人砍伤了。"  # 显示消息
+
+  # 兽人战斗结果场景
+  orc_combat_result:
+    description: "兽人倒下了。从它的尸体上，你找到了一些战利品。"
+    choices:
+      - text: "拿走战利品"
+        next: "main_chamber"  # 返回主室
+        commands:
+          - add_item: "{orc_loot}"  # 添加随机战利品
+          - set_variable: {key: "score", value: 100}  # 设置分数
+      - text: "离开尸体"
+        next: "main_chamber"  # 返回主室
+
+  # 秘密房间场景
+  secret_room:
+    description: "你进入了一个隐藏的房间。房间中央有一个古老的祭坛，上面放着闪耀的魔法水晶。"
+    choices:
+      - text: "拿走魔法水晶"
+        next: "secret_room_taken"  # 拿走水晶
+        commands:
+          - add_item: "magic_crystal"  # 添加魔法水晶
+          - set_variable: {key: "score", value: 150}  # 设置分数
+          - show_message: "你获得了魔法水晶！"  # 显示消息
+      - text: "离开房间"
+        next: "main_chamber"  # 返回主室
+
+  # 秘密房间拿走水晶场景
+  secret_room_taken:
+    description: "你拿走了魔法水晶。房间里似乎还有其他东西，但你决定离开。"
+    choices:
+      - text: "返回主室"
         next: "main_chamber"  # 返回主室
 
   # 胜利场景

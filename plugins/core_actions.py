@@ -3,6 +3,7 @@ ScriptRunner 的核心动作插件。
 提供基本的游戏状态操作动作。
 """
 
+import ast
 from typing import Dict, Any, List, Callable
 from src.infrastructure.plugin_interface import ActionPlugin
 from src.infrastructure.logger import get_logger
@@ -35,6 +36,7 @@ class CoreActionsPlugin(ActionPlugin):
         return {
             'set_variable': self._execute_set_variable,
             'parse_and_set': self._execute_parse_and_set,
+            'set': self._execute_parse_and_set,
             'set_flag': self._execute_set_flag,
             'clear_flag': self._execute_clear_flag,
             'apply_effect': self._execute_apply_effect,
@@ -42,6 +44,7 @@ class CoreActionsPlugin(ActionPlugin):
             'goto': self._execute_goto,
             'if': self._execute_if,
             'spawn_object': self._execute_spawn_object,
+            'show_message': self._execute_show_message,
         }
 
     def _execute_set_variable(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -86,7 +89,11 @@ class CoreActionsPlugin(ActionPlugin):
         elif value_str.startswith('"') and value_str.endswith('"'):
             value = value_str[1:-1]
         else:
-            value = value_str
+            # 尝试解析为列表或其他Python字面量
+            try:
+                value = ast.literal_eval(value_str)
+            except (ValueError, SyntaxError):
+                value = value_str
 
         state.set_variable(key, value)
         logger.debug(f"Set variable {key} = {value}")
@@ -167,9 +174,19 @@ class CoreActionsPlugin(ActionPlugin):
         parser = context['parser']
         state = context['state']
         condition_evaluator = context.get('condition_evaluator')
-        
+
         object_name = target
         # 这里需要实现生成对象的逻辑
         # 目前只是记录日志，实际实现需要根据游戏逻辑
         logger.debug(f"Spawning object: {object_name}")
         return {'success': True, 'message': '', 'actions': []}
+
+    def _execute_show_message(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """显示消息。"""
+        parser = context['parser']
+        state = context['state']
+        condition_evaluator = context.get('condition_evaluator')
+
+        message = target
+        logger.debug(f"Showing message: {message}")
+        return {'success': True, 'message': message, 'actions': []}

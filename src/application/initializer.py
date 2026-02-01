@@ -119,7 +119,8 @@ class ApplicationInitializer:
         state_manager = self.container.get('state_manager')
         condition_evaluator = self.container.get('condition_evaluator')
         plugin_manager = self.container.get('plugin_manager')
-        return ScriptCommandExecutor(parser, state_manager, condition_evaluator, plugin_manager)
+        config = self.container.get('config')
+        return ScriptCommandExecutor(parser, state_manager, condition_evaluator, plugin_manager, config)
 
     def _create_action_executor(self):
         """创建动作执行器的工厂函数。"""
