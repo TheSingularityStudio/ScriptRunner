@@ -156,7 +156,7 @@ class InputHandler(IInputHandler):
             action = parsed_command.get('action', 'unknown')
             target = parsed_command.get('target')
 
-            logger.info(f"Parsed action: {action}, target: {target}")
+            logger.debug(f"Parsed action: {action}, target: {target}")
 
             # 验证动作
             if action == 'unknown':

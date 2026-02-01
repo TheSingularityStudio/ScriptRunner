@@ -76,8 +76,9 @@ class PlayerActionsPlugin(ActionPlugin):
 
     def _execute_use(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行使用物品动作。"""
+        parser = context['parser']
         state = context['state']
-        
+
         if not target:
             return {'success': False, 'message': "需要指定要使用的物品。", 'actions': []}
 
@@ -85,8 +86,48 @@ class PlayerActionsPlugin(ActionPlugin):
         if target not in inventory:
             return {'success': False, 'message': f"你没有 {target}。", 'actions': []}
 
-        # 简单的使用逻辑（可以扩展）
-        return {'success': True, 'message': f"你使用了 {target}。", 'actions': []}
+        # 获取物品对象
+        obj = parser.get_object(target)
+        if not obj:
+            return {'success': False, 'message': f"无法找到物品 {target}。", 'actions': []}
+
+        actions = []
+        message = ""
+
+        # 根据物品类型处理使用逻辑
+        item_type = obj.get('type', 'item')
+        if item_type == 'item':
+            # 检查是否有治疗属性
+            if 'healing' in obj:
+                healing_amount = obj['healing']
+                current_health = state.get_variable('health', 100)
+                max_health = state.get_variable('max_health', 100)
+                new_health = min(max_health, current_health + healing_amount)
+                actions.append(f"set:health={new_health}")
+                message = f"你使用了 {target}，恢复了 {healing_amount} 点生命值。"
+                # 移除物品
+                new_inventory = [item for item in inventory if item != target]
+                actions.append(f"set:inventory={new_inventory}")
+
+            # 检查是否有魔法恢复属性
+            elif 'mana_restore' in obj:
+                mana_restore = obj['mana_restore']
+                current_mana = state.get_variable('mana', 0)
+                max_mana = state.get_variable('max_mana', 100)
+                new_mana = min(max_mana, current_mana + mana_restore)
+                actions.append(f"set:mana={new_mana}")
+                message = f"你使用了 {target}，恢复了 {mana_restore} 点魔法值。"
+                # 移除物品
+                new_inventory = [item for item in inventory if item != target]
+                actions.append(f"set:inventory={new_inventory}")
+
+            else:
+                message = f"你使用了 {target}，但没有任何效果。"
+
+        else:
+            message = f"{target} 不是可使用的物品。"
+
+        return {'success': True, 'message': message, 'actions': actions}
 
     def _execute_examine(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """执行检查物品动作。"""
