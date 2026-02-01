@@ -14,6 +14,15 @@ world:
   start: "cave_entrance"  # 起始场景ID
   description: "一个充满危险和宝藏的古老洞穴"  # 世界描述
 
+# 玩家属性 - 定义玩家的初始状态和属性
+player:
+  health: 100          # 生命值
+  max_health: 100      # 最大生命值
+  inventory: []        # 初始物品列表
+  flags: []            # 初始标志列表
+  variables:           # 初始变量
+    score: 0           # 分数
+
 # 对象定义 - 定义游戏中的物品、NPC、容器等
 define_object:
   # 武器对象
@@ -96,6 +105,33 @@ command_parser:
       哥布林: "goblin"       # 哥布林的别名
       金币: "gold"           # 金币的别名
       药水: "health_potion"  # 药水的别名
+
+# 命令定义 - 定义脚本中使用的命令及其执行逻辑
+commands:
+  # 掷骰命令 - 使用随机表系统
+  roll_dice:
+    actions:
+      - roll_table
+
+  # 显示消息命令 - 直接显示消息文本
+  show_message:
+    actions:
+      - message: "{value}"
+
+  # 添加物品命令 - 添加物品到玩家背包
+  add_item:
+    actions:
+      - add_item
+
+  # 设置变量命令 - 设置游戏变量
+  set_variable:
+    actions:
+      - set_variable
+
+  # 添加标志命令 - 设置游戏标志
+  add_flag:
+    actions:
+      - set_flag
 
 # 效果系统 - 定义游戏中的各种效果
 effects:

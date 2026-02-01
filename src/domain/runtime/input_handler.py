@@ -31,10 +31,9 @@ class InputHandler(IInputHandler):
         self._interaction_manager = None
         self._action_executor = None
 
-        # 初始化插件管理器并加载动作
-        self.plugin_manager = PluginManager()
-        self.plugin_manager.load_plugins()
-        
+        # 获取插件管理器（已由ApplicationInitializer加载）
+        self.plugin_manager = self.container.get('plugin_manager')
+
         # 从插件加载动作处理器
         self.action_handlers: Dict[str, Callable[[str], Dict[str, Any]]] = {}
         self._load_actions_from_plugins()

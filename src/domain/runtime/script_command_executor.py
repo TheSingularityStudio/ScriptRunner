@@ -15,11 +15,12 @@ logger = get_logger(__name__)
 class ScriptCommandExecutor(ICommandExecutor):
     """脚本驱动的命令执行器，所有命令行为都在脚本中定义。"""
 
-    def __init__(self, parser, state_manager, condition_evaluator, plugin_manager: PluginManager):
+    def __init__(self, parser, state_manager, condition_evaluator, plugin_manager: PluginManager, config=None):
         self.parser = parser
         self.state = state_manager
         self.condition_evaluator = condition_evaluator
         self.plugin_manager = plugin_manager
+        self.config = config
         self.actions = self._load_actions()
 
     def _load_actions(self) -> Dict[str, Callable]:
@@ -75,13 +76,21 @@ class ScriptCommandExecutor(ICommandExecutor):
                     # 执行子命令
                     messages.extend(self.execute_command(action))
             elif isinstance(action, str):
-                if action in self.actions:
+                if action == 'message':
+                    # 特殊处理：直接添加command_value作为消息
+                    messages.append(str(command_value))
+                elif ':' in action:
+                    # 处理 command:value 格式
+                    cmd_type, cmd_val = action.split(':', 1)
+                    messages.extend(self._execute_script_command({'actions': [cmd_type]}, cmd_val))
+                elif action in self.actions:
                     # 构建 context
                     context = {
                         'parser': self.parser,
                         'state': self.state,
                         'condition_evaluator': self.condition_evaluator,
-                        'command_value': command_value
+                        'command_value': command_value,
+                        'config': self.config
                     }
                     result = self.actions[action](command_value, context)
                     if isinstance(result, list):

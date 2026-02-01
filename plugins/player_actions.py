@@ -38,6 +38,7 @@ class PlayerActionsPlugin(ActionPlugin):
             'examine': self._execute_examine,
             'combine': self._execute_combine,
             'inventory': self._execute_inventory,
+            'add_item': self._execute_add_item,
         }
 
     def _execute_take(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -192,3 +193,30 @@ class PlayerActionsPlugin(ActionPlugin):
 
         # 检查对象是否在当前场景中
         return target in scene.get('objects', [])
+
+    def _execute_add_item(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行添加物品到背包动作。"""
+        state = context['state']
+        config = context['config']
+        
+        if not target:
+            return {'success': False, 'message': "需要指定要添加的物品。", 'actions': []}
+
+        try:
+            # 获取当前背包
+            inventory = state.get_variable('inventory', [])
+            
+            # 检查物品是否已经在背包中
+            if target in inventory:
+                return {'success': False, 'message': f"你已经拥有 {target}。", 'actions': []}
+
+            # 添加物品到背包
+            new_inventory = inventory + [target]
+            actions = [f"set:inventory={new_inventory}"]
+            
+            message = config.get('messages.add_item_success', f"获得了 {target}。")
+            message = message.replace('{item}', target)
+            return {'success': True, 'message': message, 'actions': actions}
+
+        except Exception as e:
+            return {'success': False, 'message': str(e), 'actions': []}
