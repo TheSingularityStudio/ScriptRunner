@@ -27,7 +27,7 @@ ScriptRunner 是一个简单的基于文本的游戏引擎，用于运行 YAML �
 
 1. 克隆仓库：
    ```bash
-   git clone https://github.com/your-username/scriptrunner.git
+   git clone https://github.com/TheSingularityStudio/ScriptRunner.git
    cd scriptrunner
    ```
 
@@ -74,13 +74,14 @@ locations:
 
 ## 示例
 
-项目包含一个示例游戏 `scripts/example_game.yaml`，演示了以下特性：
+项目包含一个示例游戏 `scripts/example_game.yaml`（洞穴冒险），演示了以下特性：
 
-- 村庄广场和森林路径场景
-- 哥布林和狼人敌人
+- 洞穴入口和主室场景
+- 哥布林敌人
 - 战斗系统
 - 物品交互
-- 事件触发
+- 效果系统
+- 随机事件和掉落
 
 运行示例：
 ```bash
@@ -89,19 +90,8 @@ python main.py scripts/example_game.yaml
 
 ## 文档
 
-- [API 文档](docs/api_zh.md) - 详细的 API 参考
 - [DSL 语法手册](docs/syntax_manual.md) - 完整的 DSL 语法指南
 - [架构文档](docs/architecture.md) - 系统架构说明
-
-## 贡献
-
-欢迎贡献！请遵循以下步骤：
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
 
 ## 测试
 
