@@ -478,7 +478,7 @@ locations:
       钥匙上刻着奇怪的符号。
     commands:
       - set: "has_key = true"
-      - add_flag: "has_opened_chest"
+      - set_flag: "has_opened_chest"
     choices:
       - text: "拿起钥匙"
         next: "village_square"

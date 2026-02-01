@@ -113,46 +113,70 @@ class GameRunner:
         max_invalid_choices = 5  # 限制无效选择次数
         rerender = True
         while current_scene_id:
-            # 更新效果状态
-            execution_engine.effects_manager.update_effects()
+            try:
+                # 更新效果状态
+                execution_engine.effects_manager.update_effects()
 
-            if rerender:
-                # 执行当前场景
-                scene_data = execution_engine.execute_scene(current_scene_id)
+                if rerender:
+                    # 执行当前场景
+                    scene_data = execution_engine.execute_scene(current_scene_id)
 
-                # 渲染场景
-                renderer.render_scene(scene_data)
+                    # 渲染场景
+                    renderer.render_scene(scene_data)
 
-            rerender = True  # 默认重新渲染
+                rerender = True  # 默认重新渲染
 
-            # 获取玩家选择
-            choice_index = renderer.get_player_choice()
+                # 获取玩家选择
+                choice_index = renderer.get_player_choice()
 
-            if choice_index == -1:
-                # 未做选择，继续当前场景，不重新渲染
-                rerender = False
-                continue
+                if choice_index == -1:
+                    # 未做选择，继续当前场景，不重新渲染
+                    rerender = False
+                    continue
 
-            # 流程选择
-            next_scene, messages = execution_engine.process_choice(choice_index)
+                # 流程选择
+                next_scene, messages = execution_engine.process_choice(choice_index)
 
-            # 显示命令执行消息
-            if messages:
-                renderer.show_message('\n'.join(messages))
+                # 显示命令执行消息
+                if messages:
+                    renderer.show_message('\n'.join(messages))
 
-            if next_scene:
-                current_scene_id = next_scene
-                invalid_choice_count = 0  # 重置计数器
-            elif not messages:
-                # 只有在没有消息（表示无效选择）时才递增计数器
-                invalid_choice_count += 1
-                if invalid_choice_count >= max_invalid_choices:
-                    self.logger.warning(f"Too many invalid choices ({invalid_choice_count}), ending game")
-                    print(f"\n无效选择次数过多 ({invalid_choice_count})，游戏结束。")
-                    break
-                print(f"\n无效的选择，请重试。 (剩余尝试次数: {max_invalid_choices - invalid_choice_count})")
-                continue
-            # 如果有消息但没有场景变化，认为是有效选择但不推进场景，不递增计数器
+                if next_scene:
+                    current_scene_id = next_scene
+                    invalid_choice_count = 0  # 重置计数器
+                elif not messages:
+                    # 只有在没有消息（表示无效选择）时才递增计数器
+                    invalid_choice_count += 1
+                    if invalid_choice_count >= max_invalid_choices:
+                        self.logger.warning(f"Too many invalid choices ({invalid_choice_count}), ending game")
+                        print(f"\n无效选择次数过多 ({invalid_choice_count})，游戏结束。")
+                        break
+                    print(f"\n无效的选择，请重试。 (剩余尝试次数: {max_invalid_choices - invalid_choice_count})")
+                    continue
+                # 如果有消息但没有场景变化，认为是有效选择但不推进场景，不递增计数器
+
+            except KeyboardInterrupt:
+                self.logger.info("Game interrupted by user during loop")
+                print("\n\n游戏已中断。")
+                # 尝试保存游戏状态
+                try:
+                    if self.container.has('state_manager'):
+                        state_manager = self.container.get('state_manager')
+                        state_manager.save_game()
+                        self.logger.info("Game state saved successfully")
+                        print("游戏状态已保存。")
+                    else:
+                        self.logger.warning("State manager not available, cannot save game")
+                        print("状态管理器不可用，无法保存游戏状态。")
+                except Exception as save_error:
+                    self.logger.error(f"Failed to save game state: {save_error}")
+                    print(f"保存游戏状态失败: {save_error}")
+                break
+            except Exception as e:
+                self.logger.error(f"Unexpected error in game loop: {e}")
+                print(f"\n游戏运行中发生意外错误: {e}")
+                print("尝试继续游戏...")
+                # 可以选择继续或退出，这里选择继续，但记录错误
 
         print("\n感谢游玩！")
         self.logger.info("Game ended normally")

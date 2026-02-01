@@ -92,6 +92,13 @@ class ConsoleRenderer(UIBackend):
             except ValueError:
                 logger.warning("Invalid input format")
                 print("请输入有效的数字或命令。")
+            except KeyboardInterrupt:
+                logger.info("Input interrupted by user")
+                raise  # Re-raise to be caught in game loop
+            except Exception as e:
+                logger.error(f"Unexpected error during input: {e}")
+                print(f"输入时发生意外错误: {e}")
+                print("请重试。")
 
     def show_message(self, message: str):
         """向玩家显示消息。"""
