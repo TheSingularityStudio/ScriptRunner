@@ -174,6 +174,7 @@ class TestInputHandler:
     def test_execute_use_success(self):
         """测试成功使用物品。"""
         self.mock_state_manager.get_variable.side_effect = lambda key, default=None: ['potion'] if key == 'inventory' else default
+        self.mock_parser.get_object.return_value = {'type': 'item', 'healing': 20}
         result = self.handler._execute_action('use', 'potion')
         assert result['success'] is True
         assert '使用了' in result['message']

@@ -45,6 +45,13 @@ class InputHandler(IInputHandler):
         self._scene_cache: Dict[str, Any] = {}
         self._object_cache: Dict[str, Any] = {}
 
+    @property
+    def combine_recipes(self):
+        """获取组合配方。"""
+        if self._combine_recipes is None:
+            self._combine_recipes = self.config.get('game.combine_recipes', {})
+        return self._combine_recipes
+
     def _load_actions_from_plugins(self):
         """从插件加载动作处理器。"""
         action_plugins = self.plugin_manager.get_plugins_by_type(ActionPlugin)
