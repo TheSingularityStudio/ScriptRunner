@@ -145,7 +145,21 @@ class ConditionEvaluator(IConditionEvaluator):
     def _get_value(self, expression: str):
         """从表达式中获取值（变量或字面量）。"""
         expression = expression.strip()
-        if expression in self.state.variables:
+        if '.' in expression:
+            # 处理点表示法，如 player.health
+            parts = expression.split('.')
+            base = parts[0]
+            if base in self.state.variables:
+                value = self.state.variables[base]
+                for part in parts[1:]:
+                    if isinstance(value, dict) and part in value:
+                        value = value[part]
+                    else:
+                        return expression  # 如果无法访问，返回原表达式
+                return value
+            else:
+                return expression
+        elif expression in self.state.variables:
             return self.state.variables[expression]
         return expression
 

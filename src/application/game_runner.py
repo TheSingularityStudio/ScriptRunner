@@ -94,20 +94,18 @@ class GameRunner:
                 # 检查是否有attributes子字典，或者直接使用player下的属性
                 attributes = player_data.get('attributes', player_data)
                 if isinstance(attributes, dict):
-                    for attr, value in attributes.items():
-                        state_manager.set_variable(attr, value)
+                    # 设置player为字典，包含所有属性
+                    state_manager.set_variable('player', attributes)
                     self.logger.info("Player attributes initialized successfully")
                 else:
                     self.logger.warning("No valid player attributes found in script data, using defaults")
                     # 设置默认玩家属性
-                    state_manager.set_variable('health', 100)
-                    state_manager.set_variable('name', 'Player')
+                    state_manager.set_variable('player', {'health': 100, 'name': 'Player'})
                     self.logger.info("Default player attributes set")
             else:
                 self.logger.warning("No valid player attributes found in script data, using defaults")
                 # 设置默认玩家属性
-                state_manager.set_variable('health', 100)
-                state_manager.set_variable('name', 'Player')
+                state_manager.set_variable('player', {'health': 100, 'name': 'Player'})
                 self.logger.info("Default player attributes set")
         except KeyError as e:
             self.logger.error(f"Error initializing player attributes: {e}")
