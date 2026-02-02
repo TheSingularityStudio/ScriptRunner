@@ -120,6 +120,8 @@ class GameRunner:
         """运行主游戏循环。"""
         invalid_choice_count = 0
         max_invalid_choices = 5  # 限制无效选择次数
+        consecutive_error_count = 0
+        max_consecutive_errors = 3  # 限制连续错误次数
         rerender = True
         while current_scene_id:
             try:
@@ -153,6 +155,7 @@ class GameRunner:
                 if next_scene:
                     current_scene_id = next_scene
                     invalid_choice_count = 0  # 重置计数器
+                    consecutive_error_count = 0  # 重置错误计数器
                 elif not messages:
                     # 只有在没有消息（表示无效选择）时才递增计数器
                     invalid_choice_count += 1
@@ -163,6 +166,8 @@ class GameRunner:
                     print(f"\n无效的选择，请重试。 (剩余尝试次数: {max_invalid_choices - invalid_choice_count})")
                     continue
                 # 如果有消息但没有场景变化，认为是有效选择但不推进场景，不递增计数器
+
+                consecutive_error_count = 0  # 重置错误计数器，如果没有异常
 
             except KeyboardInterrupt:
                 self.logger.info("Game interrupted by user during loop")
@@ -182,10 +187,17 @@ class GameRunner:
                     print(f"保存游戏状态失败: {save_error}")
                 break
             except Exception as e:
-                self.logger.error(f"Unexpected error in game loop: {e}")
-                print(f"\n游戏运行中发生意外错误: {e}")
-                print("尝试继续游戏...")
-                # 可以选择继续或退出，这里选择继续，但记录错误
+                consecutive_error_count += 1
+                self.logger.error(f"Unexpected error in game loop (attempt {consecutive_error_count}/{max_consecutive_errors}): {e}")
+                print(f"\n游戏运行中发生意外错误 (第{consecutive_error_count}次): {e}")
+
+                if consecutive_error_count >= max_consecutive_errors:
+                    self.logger.error(f"Too many consecutive errors ({consecutive_error_count}), terminating program")
+                    print(f"\n连续错误次数过多 ({consecutive_error_count})，程序终止。")
+                    raise SystemExit(1)  # 强制退出程序
+                else:
+                    print("尝试继续游戏...")
+                    # 继续循环，但记录错误
 
         print("\n感谢游玩！")
         self.logger.info("Game ended normally")

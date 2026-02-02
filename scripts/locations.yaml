@@ -82,7 +82,7 @@ locations:
     description: "角落里的动静原来是一个丑陋的哥布林！它发现了你，举起武器准备战斗。"
     choices:
       - text: "攻击哥布林"
-        next: "combat_start"  # 开始战斗
+        next: "goblin_combat_init"  # 初始化战斗
         condition: "has_flag('has_sword')"  # 条件：有剑
       - text: "逃跑"
         next: "main_chamber"  # 返回主室
@@ -91,40 +91,114 @@ locations:
       - text: "试图和哥布林对话"
         next: "goblin_talk"  # 对话场景
 
+  # 哥布林战斗初始化
+  goblin_combat_init:
+    description: "战斗开始！你准备与哥布林战斗。"
+    choices:
+      - text: "开始战斗"
+        next: "goblin_combat_loop"  # 进入战斗循环
+        commands:
+          - set_variable: {key: "enemy_health", value: 30}  # 设置敌人生命值
+          - set_variable: {key: "enemy_name", value: "哥布林"}  # 设置敌人名称
+          - set_variable: {key: "combat_round", value: 1}  # 初始化回合数
+          - set_variable: {key: "current_defense", value: 0}  # 初始化防御
+          - show_message: "哥布林生命值：{enemy_health}/30"  # 显示敌人状态
+
+  # 哥布林战斗循环
+  goblin_combat_loop:
+    description: "=== 第{combat_round}回合 ===\n你的生命值：{health}/100\n{enemy_name}生命值：{enemy_health}/30\n\n你该怎么办？"
+    choices:
+      - text: "攻击"
+        next: "goblin_player_attack"  # 玩家攻击
+      - text: "防御"
+        next: "goblin_player_defend"  # 玩家防御
+      - text: "使用药水"
+        next: "goblin_use_potion"  # 使用药水
+        condition: "has_item('health_potion')"  # 条件：有药水
+      - text: "逃跑"
+        next: "main_chamber"  # 逃跑
+        commands:
+          - show_message: "你成功逃脱了{enemy_name}的追击。"  # 显示消息
+
+  # 哥布林玩家攻击
+  goblin_player_attack:
+    description: "你挥剑攻击{enemy_name}！"
+    choices:
+      - text: "继续"
+        next: "goblin_enemy_turn"  # 敌人回合
+        commands:
+          - roll_dice: {table: "player_attack_damage", result_var: "player_damage"}  # 随机伤害
+          - set_variable: {key: "enemy_health", value: "{enemy_health - player_damage}"}  # 减少敌人生命值
+          - show_message: "你造成了{player_damage}点伤害！{enemy_name}剩余生命值：{enemy_health}/30"  # 显示消息
+
+  # 哥布林玩家防御
+  goblin_player_defend:
+    description: "你举起盾牌防御{enemy_name}的攻击！"
+    choices:
+      - text: "继续"
+        next: "goblin_enemy_turn"  # 敌人回合
+        commands:
+          - set_variable: {key: "current_defense", value: 5}  # 设置防御值
+          - show_message: "你进入了防御姿态，减少即将受到的伤害。"  # 显示消息
+
+  # 哥布林使用药水
+  goblin_use_potion:
+    description: "你喝下了治疗药水！"
+    choices:
+      - text: "继续"
+        next: "goblin_enemy_turn"  # 敌人回合
+        commands:
+          - apply_effect: "combat_healing"  # 应用治疗效果
+          - remove_item: "health_potion"  # 移除药水
+          - show_message: "你恢复了25点生命值！当前生命值：{health}/100"  # 显示消息
+
+  # 哥布林敌人回合
+  goblin_enemy_turn:
+    description: "{enemy_name}向你发起攻击！"
+    choices:
+      - text: "承受攻击"
+        next: "goblin_check_conditions"  # 检查战斗条件
+        commands:
+          - roll_dice: {table: "enemy_attack_damage", result_var: "enemy_damage"}  # 随机伤害
+          - set_variable: {key: "actual_damage", value: "{max(0, enemy_damage - current_defense)}"}  # 计算实际伤害
+          - set_variable: {key: "health", value: "{health - actual_damage}"}  # 减少玩家生命值
+          - show_message: "{enemy_name}造成了{actual_damage}点伤害！你的生命值：{health}/100"  # 显示消息
+          - set_variable: {key: "combat_round", value: "{combat_round + 1}"}  # 增加回合数
+          - set_variable: {key: "current_defense", value: 0}  # 重置防御
+
+  # 哥布林检查战斗条件
+  goblin_check_conditions:
+    description: "检查战斗状态..."
+    choices:
+      - text: "继续战斗"
+        next: "goblin_combat_loop"  # 返回战斗循环
+        condition: "enemy_health > 0 and player.health > 0"  # 条件：双方都存活
+      - text: "胜利！"
+        next: "goblin_victory"  # 胜利场景
+        condition: "enemy_health <= 0"  # 条件：敌人死亡
+      - text: "失败..."
+        next: "game_over"  # 游戏结束
+        condition: "player.health <= 0"  # 条件：玩家死亡
+
+  # 哥布林胜利场景
+  goblin_victory:
+    description: "你击败了{enemy_name}！它倒在地上，不再动弹。"
+    choices:
+      - text: "搜刮战利品"
+        next: "main_chamber"  # 返回主室
+        commands:
+          - roll_dice: {table: "goblin_loot", result_var: "combat_loot"}  # 随机掉落
+          - add_item: "{combat_loot}"  # 添加战利品
+          - set_variable: {key: "score", value: "{score + 50}"}  # 增加分数
+          - show_message: "你获得了{combat_loot}！分数+50"  # 显示消息
+
   # 哥布林对话场景
   goblin_talk:
     description: "哥布林用奇怪的语言对你吼叫，似乎不打算和你交流。它看起来很生气。"
     choices:
       - text: "攻击它"
-        next: "combat_start"  # 开始战斗
+        next: "goblin_combat_init"  # 开始战斗
       - text: "逃跑"
-        next: "main_chamber"  # 返回主室
-
-  # 战斗开始场景
-  combat_start:
-    description: "战斗开始了！你和哥布林互相攻击。"
-    choices:
-      - text: "继续战斗"
-        next: "combat_result"  # 战斗结果
-        commands:
-          - roll_dice: {table: "goblin_loot", result_var: "combat_loot"}  # 随机掉落
-          - show_message: "你击败了哥布林！"  # 显示消息
-      - text: "逃跑"
-        next: "main_chamber"  # 返回主室
-        commands:
-          - apply_effect: "poison"  # 应用中毒效果
-          - show_message: "你在逃跑时被哥布林抓伤了。"  # 显示消息
-
-  # 战斗结果场景
-  combat_result:
-    description: "哥布林倒下了。从它的尸体上，你找到了一些战利品。"
-    choices:
-      - text: "拿走战利品"
-        next: "main_chamber"  # 返回主室
-        commands:
-          - add_item: "{combat_loot}"  # 添加随机战利品
-          - set_variable: {key: "score", value: 50}  # 设置分数
-      - text: "离开尸体"
         next: "main_chamber"  # 返回主室
 
   # 兽人遭遇场景
@@ -132,7 +206,7 @@ locations:
     description: "你深入洞穴，发现了一个强壮的兽人守卫着一条隐秘的通道。它看起来很危险。"
     choices:
       - text: "攻击兽人"
-        next: "orc_combat"  # 兽人战斗
+        next: "orc_combat_init"  # 初始化兽人战斗
         condition: "has_flag('has_sword')"  # 条件：有剑
       - text: "试图绕过兽人"
         next: "secret_room"  # 秘密房间
@@ -144,32 +218,106 @@ locations:
         commands:
           - show_message: "你迅速逃回了主室。"  # 显示消息
 
-  # 兽人战斗场景
-  orc_combat:
-    description: "战斗开始了！兽人挥舞着巨大的斧头向你冲来。"
+  # 兽人战斗初始化
+  orc_combat_init:
+    description: "战斗开始！你准备与强大的兽人战斗。"
+    choices:
+      - text: "开始战斗"
+        next: "orc_combat_loop"  # 进入兽人战斗循环
+        commands:
+          - set_variable: {key: "enemy_health", value: 50}  # 设置兽人生命值
+          - set_variable: {key: "enemy_name", value: "兽人"}  # 设置敌人名称
+          - set_variable: {key: "combat_round", value: 1}  # 初始化回合数
+          - set_variable: {key: "current_defense", value: 0}  # 初始化防御
+          - show_message: "兽人生命值：{enemy_health}/50"  # 显示敌人状态
+
+  # 兽人战斗循环
+  orc_combat_loop:
+    description: "=== 第{combat_round}回合 ===\n你的生命值：{health}/100\n{enemy_name}生命值：{enemy_health}/50\n\n你该怎么办？"
+    choices:
+      - text: "攻击"
+        next: "orc_player_attack"  # 玩家攻击
+      - text: "防御"
+        next: "orc_player_defend"  # 玩家防御
+      - text: "使用药水"
+        next: "orc_use_potion"  # 使用药水
+        condition: "has_item('health_potion')"  # 条件：有药水
+      - text: "逃跑"
+        next: "main_chamber"  # 逃跑
+        commands:
+          - show_message: "你成功逃脱了{enemy_name}的追击。"  # 显示消息
+
+  # 兽人玩家攻击
+  orc_player_attack:
+    description: "你挥剑攻击{enemy_name}！"
+    choices:
+      - text: "继续"
+        next: "orc_enemy_turn"  # 敌人回合
+        commands:
+          - roll_dice: {table: "player_attack_damage", result_var: "player_damage"}  # 随机伤害
+          - set_variable: {key: "enemy_health", value: "{enemy_health - player_damage}"}  # 减少敌人生命值
+          - show_message: "你造成了{player_damage}点伤害！{enemy_name}剩余生命值：{enemy_health}/50"  # 显示消息
+
+  # 兽人玩家防御
+  orc_player_defend:
+    description: "你举起盾牌防御{enemy_name}的攻击！"
+    choices:
+      - text: "继续"
+        next: "orc_enemy_turn"  # 敌人回合
+        commands:
+          - set_variable: {key: "current_defense", value: 5}  # 设置防御值
+          - show_message: "你进入了防御姿态，减少即将受到的伤害。"  # 显示消息
+
+  # 兽人使用药水
+  orc_use_potion:
+    description: "你喝下了治疗药水！"
+    choices:
+      - text: "继续"
+        next: "orc_enemy_turn"  # 敌人回合
+        commands:
+          - apply_effect: "combat_healing"  # 应用治疗效果
+          - remove_item: "health_potion"  # 移除药水
+          - show_message: "你恢复了25点生命值！当前生命值：{health}/100"  # 显示消息
+
+  # 兽人敌人回合
+  orc_enemy_turn:
+    description: "{enemy_name}挥舞着巨大的斧头向你发起猛烈攻击！"
+    choices:
+      - text: "承受攻击"
+        next: "orc_check_conditions"  # 检查战斗条件
+        commands:
+          - roll_dice: {table: "orc_attack_damage", result_var: "enemy_damage"}  # 随机伤害（兽人伤害更高）
+          - set_variable: {key: "actual_damage", value: "{max(0, enemy_damage - current_defense)}"}  # 计算实际伤害
+          - set_variable: {key: "health", value: "{health - actual_damage}"}  # 减少玩家生命值
+          - show_message: "{enemy_name}造成了{actual_damage}点伤害！你的生命值：{health}/100"  # 显示消息
+          - set_variable: {key: "combat_round", value: "{combat_round + 1}"}  # 增加回合数
+          - set_variable: {key: "current_defense", value: 0}  # 重置防御
+
+  # 兽人检查战斗条件
+  orc_check_conditions:
+    description: "检查战斗状态..."
     choices:
       - text: "继续战斗"
-        next: "orc_combat_result"  # 战斗结果
-        commands:
-          - roll_dice: {table: "orc_loot", result_var: "orc_loot"}  # 随机掉落
-          - show_message: "你击败了兽人！"  # 显示消息
-      - text: "逃跑"
-        next: "main_chamber"  # 返回主室
-        commands:
-          - apply_effect: "poison"  # 应用中毒效果
-          - show_message: "你在逃跑时被兽人砍伤了。"  # 显示消息
+        next: "orc_combat_loop"  # 返回战斗循环
+        condition: "enemy_health > 0 and player.health > 0"  # 条件：双方都存活
+      - text: "胜利！"
+        next: "orc_victory"  # 胜利场景
+        condition: "enemy_health <= 0"  # 条件：敌人死亡
+      - text: "失败..."
+        next: "game_over"  # 游戏结束
+        condition: "player.health <= 0"  # 条件：玩家死亡
 
-  # 兽人战斗结果场景
-  orc_combat_result:
-    description: "兽人倒下了。从它的尸体上，你找到了一些战利品。"
+  # 兽人胜利场景
+  orc_victory:
+    description: "你击败了强大的{enemy_name}！它庞大的身躯轰然倒地。"
     choices:
-      - text: "拿走战利品"
+      - text: "搜刮战利品"
         next: "main_chamber"  # 返回主室
         commands:
-          - add_item: "{orc_loot}"  # 添加随机战利品
-          - set_variable: {key: "score", value: 100}  # 设置分数
-      - text: "离开尸体"
-        next: "main_chamber"  # 返回主室
+          - roll_dice: {table: "orc_loot", result_var: "combat_loot"}  # 随机掉落
+          - add_item: "{combat_loot}"  # 添加战利品
+          - set_variable: {key: "score", value: "{score + 100}"}  # 增加分数
+          - show_message: "你获得了{combat_loot}！分数+100"  # 显示消息
 
   # 秘密房间场景
   secret_room:
@@ -197,6 +345,19 @@ locations:
     choices:
       - text: "结束游戏"
         next: "exit_game"  # 退出游戏
+
+  # 游戏结束场景
+  game_over:
+    description: "你被击败了！游戏结束。"
+    choices:
+      - text: "重新开始"
+        next: "cave_entrance"  # 返回入口
+        commands:
+          - set_variable: {key: "player.health", value: 100}  # 重置生命值
+          - set_variable: {key: "inventory", value: []}  # 清空背包
+          - set_variable: {key: "flags", value: []}  # 清空标志
+          - set_variable: {key: "score", value: 0}  # 重置分数
+          - show_message: "游戏重新开始..."  # 显示消息
 
   # 退出游戏场景
   exit_game:

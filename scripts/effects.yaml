@@ -45,3 +45,29 @@ effects:
     unlock: true         # 解锁容器
     reveal_contents: true  # 显示内容
     description: "打开容器，显示内部物品"  # 描述
+
+  # 玩家攻击效果
+  player_attack:
+    type: "instant"       # 即时效果
+    damage: 15           # 造成15点伤害
+    description: "玩家进行攻击，造成伤害"  # 描述
+
+  # 敌人攻击效果
+  enemy_attack:
+    type: "instant"       # 即时效果
+    damage: 10           # 造成10点伤害
+    description: "敌人进行攻击，造成伤害"  # 描述
+
+  # 防御增益效果
+  defense_buff:
+    type: "temporary"     # 临时效果
+    duration: 1          # 持续1回合
+    modifiers:
+      defense: +5        # 增加5点防御
+    description: "提高防御力，减少受到的伤害"  # 描述
+
+  # 战斗治疗效果
+  combat_healing:
+    type: "instant"       # 即时效果
+    healing: 25          # 恢复25点生命
+    description: "在战斗中使用治疗物品，恢复生命值"  # 描述

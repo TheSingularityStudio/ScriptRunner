@@ -21,3 +21,30 @@ random_system:
       - item: "key"            # 掉落钥匙
         weight: 20            # 权重20%
         count: 1              # 数量1个
+
+    # 玩家攻击伤害表
+    player_attack_damage:
+      - value: 5
+        weight: 30
+      - value: 7
+        weight: 40
+      - value: 10
+        weight: 30
+
+    # 敌人攻击伤害表（通用）
+    enemy_attack_damage:
+      - value: 3
+        weight: 40
+      - value: 5
+        weight: 40
+      - value: 7
+        weight: 20
+
+    # 兽人攻击伤害表
+    orc_attack_damage:
+      - value: 6
+        weight: 30
+      - value: 8
+        weight: 40
+      - value: 12
+        weight: 30

@@ -53,11 +53,22 @@ class CoreActionsPlugin(ActionPlugin):
         state = context['state']
         condition_evaluator = context.get('condition_evaluator')
         
-        # 这个方法可能不直接使用，因为脚本使用 parse_and_set
         command_value = target if isinstance(target, dict) else {'name': target, 'value': None}
-        name = command_value.get('name')
+        name = command_value.get('name') or command_value.get('key')  # 支持 'name' 或 'key'
         value = command_value.get('value')
         if name is not None and value is not None:
+            # 如果 value 是字符串且包含变量，评估它
+            if isinstance(value, str) and '{' in value and '}' in value:
+                from src.utils.expression_evaluator import ExpressionEvaluator
+                # 获取所有变量作为上下文
+                all_vars = state.get_all_variables()
+                # 添加玩家属性
+                all_vars.update({
+                    'health': state.get_variable('health', 0),
+                    'max_health': state.get_variable('max_health', 0),
+                    'score': state.get_variable('score', 0),
+                })
+                value = ExpressionEvaluator.evaluate_expression(value, all_vars)
             state.set_variable(name, value)
             logger.debug(f"Set variable {name} = {value}")
         return {'success': True, 'message': '', 'actions': []}
