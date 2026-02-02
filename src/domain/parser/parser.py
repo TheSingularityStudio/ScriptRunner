@@ -24,6 +24,7 @@ class ScriptParser(IScriptParser):
         self.state_machines = {}  # DSL state machines
         self.effects = {}  # DSL effects
         self.commands = {}  # DSL commands
+        self.player_commands = {}  # DSL player commands
         self.interaction = {}  # DSL interaction
         self.meta = {}  # DSL meta
 
@@ -133,6 +134,9 @@ class ScriptParser(IScriptParser):
             if 'commands' in self.script_data:
                 logger.debug("Parsing DSL commands")
                 self._parse_commands()
+            if 'player_commands' in self.script_data:
+                logger.debug("Parsing DSL player commands")
+                self._parse_player_commands()
             if 'random_system' in self.script_data:
                 logger.debug("Parsing DSL random system")
                 self._parse_random_system()
@@ -189,6 +193,10 @@ class ScriptParser(IScriptParser):
     def _parse_commands(self):
         """解析命令定义。"""
         self.commands = self.script_data['commands']
+
+    def _parse_player_commands(self):
+        """解析玩家命令映射。"""
+        self.player_commands = self.script_data.get('player_commands', {})
 
     def _parse_interaction(self):
         """解析互动系统。"""
@@ -259,6 +267,10 @@ class ScriptParser(IScriptParser):
     def get_command(self, command_name: str) -> Dict[str, Any]:
         """获取命令定义。"""
         return self.commands.get(command_name, {})
+
+    def get_player_command(self, player_action: str) -> Dict[str, Any]:
+        """获取玩家命令映射。"""
+        return self.player_commands.get(player_action, {})
 
     def get_recipes(self) -> Dict[str, Any]:
         """获取配方数据。"""
@@ -346,11 +358,18 @@ class ScriptParser(IScriptParser):
 
     def _resolve_target_alias(self, target_text: str) -> str:
         """解析目标的别名，返回标准名称。"""
-        # 检查对象别名
+        # 检查DSL对象别名
         for obj_name, obj_def in self.objects.items():
             aliases = obj_def.get('aliases', [])
             if target_text in aliases or target_text == obj_def.get('name', ''):
                 return obj_name
+
+        # 检查command_parser中的对象别名
+        if self.command_parser_config:
+            objects = self.command_parser_config.get('nouns', {}).get('objects', {})
+            for alias, standard_name in objects.items():
+                if target_text == alias:
+                    return standard_name
 
         return target_text
 

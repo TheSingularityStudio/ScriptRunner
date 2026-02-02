@@ -20,3 +20,28 @@ effects:
     type: "instant"       # 即时效果
     healing: 20          # 恢复20点生命
     description: "恢复生命值"  # 描述
+
+  # 治疗药水效果
+  health_potion_effect:
+    type: "instant"       # 即时效果
+    healing: 20          # 恢复20点生命
+    description: "喝下治疗药水，恢复生命值"  # 描述
+
+  # 魔法水晶效果
+  magic_crystal_effect:
+    type: "instant"       # 即时效果
+    mana_restore: 30     # 恢复30点魔法
+    description: "使用魔法水晶，恢复魔法值"  # 描述
+
+  # 伤害效果 (用于攻击)
+  damage_effect:
+    type: "instant"       # 即时效果
+    damage: 10           # 造成10点伤害
+    description: "造成伤害"  # 描述
+
+  # 打开效果 (用于打开容器)
+  open_effect:
+    type: "instant"       # 即时效果
+    unlock: true         # 解锁容器
+    reveal_contents: true  # 显示内容
+    description: "打开容器，显示内部物品"  # 描述

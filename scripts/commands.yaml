@@ -82,3 +82,65 @@ commands:
   apply_effect:
     actions:
       - apply_effect
+
+# 玩家命令映射 - 将玩家动词映射到脚本命令
+player_commands:
+  # 拿取命令 - 映射到添加物品
+  take:
+    script_command: "add_item"
+    target_required: true
+    parameters:
+      item_id: "{target}"  # 使用目标对象ID
+
+  # 使用命令 - 映射到应用效果
+  use:
+    script_command: "apply_effect"
+    target_required: true
+    parameters:
+      effect_id: "{target}_effect"  # 根据物品类型应用对应效果，如 health_potion_effect
+
+  # 攻击命令 - 映射到应用效果 (应用伤害效果)
+  attack:
+    script_command: "apply_effect"
+    target_required: true
+    parameters:
+      effect_id: "damage_effect"  # 应用伤害效果
+
+  # 查看命令 - 映射到显示消息 (显示对象描述)
+  look:
+    script_command: "show_message"
+    target_required: false
+    parameters:
+      message: "你看到：{target_description}"  # 显示目标描述，如果无目标则显示场景
+
+  # 查看背包命令 - 映射到显示消息 (显示背包内容)
+  inventory:
+    script_command: "show_message"
+    target_required: false
+    parameters:
+      message: "你的背包：{inventory_list}"  # 显示背包物品列表
+
+  # 打开命令 - 映射到应用效果 (应用打开效果，可能解锁或显示内容)
+  open:
+    script_command: "apply_effect"
+    target_required: true
+    parameters:
+      effect_id: "open_effect"  # 应用打开效果
+
+# 错误处理 - 定义无效输入或缺失参数时的处理方式
+error_handling:
+  invalid_command:
+    message: "我不明白你的意思。请尝试其他命令。"
+    fallback: "help"
+
+  missing_target:
+    message: "你需要指定一个目标。"
+    fallback: "look"
+
+  invalid_target:
+    message: "这里没有那个东西。"
+    fallback: "look"
+
+  command_failed:
+    message: "命令执行失败。"
+    fallback: "look"
