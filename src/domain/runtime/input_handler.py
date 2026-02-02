@@ -38,11 +38,8 @@ class InputHandler(IInputHandler):
         self.action_handlers: Dict[str, Callable[[str], Dict[str, Any]]] = {}
         self._load_actions_from_plugins()
 
-        # 从配置加载组合配方
-        self.combine_recipes = self.config.get('game.combine_recipes', {
-            'herb_potion': ['herb', 'bottle'],
-            'sword_dagger': ['sword', 'dagger'],
-        })
+        # 从脚本加载组合配方（将在第一次访问parser时设置）
+        self._combine_recipes = None
 
         # 缓存常用数据
         self._scene_cache: Dict[str, Any] = {}
@@ -77,6 +74,7 @@ class InputHandler(IInputHandler):
             'condition_evaluator': self.condition_evaluator,
             'interaction_manager': self.interaction_manager,
             'action_executor': self.action_executor,
+            'input_handler': self,
             'is_object_accessible': self._is_object_accessible,
         }
 

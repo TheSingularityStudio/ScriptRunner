@@ -148,6 +148,9 @@ class ScriptParser(IScriptParser):
             if 'meta' in self.script_data:
                 logger.debug("Parsing DSL meta")
                 self._parse_meta()
+            if 'recipes' in self.script_data:
+                logger.debug("Parsing DSL recipes")
+                self._parse_recipes()
             logger.debug("DSL structures parsed successfully")
         except Exception as e:
             logger.error(f"Failed to parse DSL structures: {str(e)}")
@@ -194,6 +197,10 @@ class ScriptParser(IScriptParser):
     def _parse_meta(self):
         """解析元数据。"""
         self.meta = self.script_data['meta']
+
+    def _parse_recipes(self):
+        """解析配方数据。"""
+        self.recipes = self.script_data['recipes']
 
     def get_scene(self, scene_id: str) -> Dict[str, Any]:
         """通过ID获取特定场景，支持DSL和传统格式。"""
@@ -252,6 +259,10 @@ class ScriptParser(IScriptParser):
     def get_command(self, command_name: str) -> Dict[str, Any]:
         """获取命令定义。"""
         return self.commands.get(command_name, {})
+
+    def get_recipes(self) -> Dict[str, Any]:
+        """获取配方数据。"""
+        return self.recipes
 
     def parse_player_command(self, input_text: str) -> Dict[str, Any]:
         """解析玩家输入命令，返回动作字典。"""

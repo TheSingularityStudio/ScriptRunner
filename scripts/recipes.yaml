@@ -1,0 +1,7 @@
+# ScriptRunner 组合配方配置
+# 定义物品组合的配方
+
+recipes:
+  combine_recipes:
+    herb_potion: ['herb', 'bottle']
+    sword_dagger: ['sword', 'dagger']

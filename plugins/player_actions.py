@@ -168,11 +168,8 @@ class PlayerActionsPlugin(ActionPlugin):
 
             inventory = state.get_variable('inventory', [])
 
-            # 从配置获取组合配方
-            combine_recipes = config.get('game.combine_recipes', {
-                'herb_potion': ['herb', 'bottle'],
-                'sword_dagger': ['sword', 'dagger'],
-            })
+            # 从输入处理器获取组合配方
+            combine_recipes = context['input_handler'].combine_recipes
 
             # 检查配方
             for result, ingredients in combine_recipes.items():
