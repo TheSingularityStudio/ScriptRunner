@@ -8,6 +8,7 @@ import time
 from .interfaces import IEffectsManager
 from ...infrastructure.logger import get_logger
 from .action_executor import ActionExecutor
+from ...utils.expression_evaluator import ExpressionEvaluator
 
 logger = get_logger(__name__)
 
@@ -228,14 +229,38 @@ class EffectsManager(IEffectsManager):
             logger.error(f"Error executing effect action '{action}': {e}")
 
     def _parse_damage_expression(self, damage_str: str, effect_data: Dict[str, Any]) -> int:
-        """解析伤害表达式，支持数字和简单表达式。"""
+        """解析伤害表达式，支持数字和复杂表达式。"""
         try:
             # 尝试直接转换为整数
             return int(damage_str)
         except ValueError:
-            # 如果是表达式，暂时返回默认值（可以扩展为支持更复杂的表达式）
-            logger.warning(f"Complex damage expression '{damage_str}' not supported, using default 5")
-            return 5
+            # 构建表达式评估上下文
+            context = {}
+
+            # 添加玩家属性
+            player = self.state.get_variable('player', {})
+            if isinstance(player, dict):
+                context['player'] = player
+
+            # 添加效果数据
+            context['effect'] = effect_data
+
+            # 添加其他常用游戏状态变量
+            common_vars = ['strength', 'health', 'max_health', 'level', 'experience', 'game_time']
+            for var in common_vars:
+                value = self.state.get_variable(var)
+                if value is not None:
+                    context[var] = value
+
+            # 使用表达式评估器评估复杂表达式
+            result = ExpressionEvaluator.evaluate_expression(damage_str, context)
+
+            # 确保结果是整数
+            try:
+                return int(result)
+            except (TypeError, ValueError):
+                logger.warning(f"Expression '{damage_str}' did not evaluate to a number, using default 5")
+                return 5
 
     def get_status_message(self) -> str:
         """获取效果状态消息。"""
