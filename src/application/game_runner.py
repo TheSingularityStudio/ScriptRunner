@@ -43,7 +43,7 @@ class GameRunner:
         print(f"游戏从场景开始: {current_scene_id}")
 
         # 运行游戏循环
-        self._run_game_loop(execution_engine, renderer, current_scene_id)
+        self._run_game_loop(execution_engine, renderer, state_manager, current_scene_id)
 
     def _initialize_application(self):
         """初始化应用程序并返回必要的组件。"""
@@ -114,7 +114,7 @@ class GameRunner:
             self.logger.error(f"Unexpected error during player initialization: {e}")
             raise ScriptError(f"玩家初始化意外错误: {e}")
 
-    def _run_game_loop(self, execution_engine, renderer, current_scene_id: str):
+    def _run_game_loop(self, execution_engine, renderer, state_manager, current_scene_id: str):
         """运行主游戏循环。"""
         invalid_choice_count = 0
         max_invalid_choices = 5  # 限制无效选择次数
@@ -146,9 +146,15 @@ class GameRunner:
                 # 流程选择
                 next_scene, messages = execution_engine.process_choice(choice_index)
 
-                # 显示命令执行消息
-                if messages:
-                    renderer.show_message('\n'.join(messages))
+                # 获取广播消息
+                broadcast_messages = state_manager.get_broadcast_messages()
+
+                # 合并所有消息
+                all_messages = messages + broadcast_messages
+
+                # 显示所有消息
+                if all_messages:
+                    renderer.show_message('\n'.join(all_messages))
 
                 if next_scene:
                     current_scene_id = next_scene

@@ -18,66 +18,65 @@ class ActionExecutor:
 
     def execute_action(self, action: str, context: Optional[Dict[str, Any]] = None) -> None:
         """
-        Execute a single DSL action string.
+        执行单个 DSL 动作字符串。
 
-        This method parses and executes various types of actions defined in the game's
-        Domain Specific Language (DSL). Actions are colon-separated commands that
-        modify game state, trigger events, or perform logging operations.
+        此方法解析并执行游戏域特定语言（DSL）中定义的各种类型的动作。动作是用冒号分隔的命令，用于修改游戏状态、触发事件或执行日志操作。
 
         Args:
-            action: The action string to execute, using format "command:parameter"
-            context: Optional dictionary for additional context (used for logging/effects)
+            action: 要执行的操作字符串，使用格式 "command:parameter"
+            context: 可选字典，用于提供附加上下文（用于日志记录/效果）
 
         Raises:
-            Exception: Re-raises any execution errors after logging them
+            Exception: 在记录执行错误后重新引发它们
 
         Supported action formats:
-            - "set:variable=value": Set a game variable (delegates to command executor)
-            - "add_flag:flag_name": Set a boolean flag to true
-            - "remove_flag:flag_name" or "clear_flag:flag_name": Clear a flag
-            - "broadcast:message": Log an informational broadcast message
-            - "log:message": Log a custom message
+            - "set:variable=value": 设置一个游戏变量（交给命令执行器处理）
+            - "add_flag:flag_name": 将布尔标志设置为真
+            - "remove_flag:flag_name" 或 "clear_flag:flag_name": 清除标志
+            - "broadcast:message": 记录信息广播消息
+            - "log:message": 记录自定义消息
 
         Note:
-            - String parameters can be enclosed in quotes (single or double)
-            - Unknown actions are logged as warnings but don't raise errors
-            - All execution errors are logged and re-raised to maintain error visibility
+            - 字符串参数可以用引号（单引号或双引号）括起来
+            - 未知操作会被记录为警告，但不会引发错误
+            - 所有执行错误都会被记录并重新引发，以保持错误的可见性
         """
         if context is None:
             context = {}
 
         try:
             if action.startswith('set:'):
-                # Variable assignment action: set:variable=expression
+                # 变量赋值动作: set:variable=expression
                 var_expr = action[4:].strip()
                 self.command_executor.execute_command({'set': var_expr})
                 logger.debug(f"Executed set action: {var_expr}")
 
             elif action.startswith('add_flag:'):
-                # Flag setting action: add_flag:flag_name
+                # 标志设置动作: add_flag:flag_name
                 flag = action[9:].strip()
                 self.state.set_flag(flag)
                 logger.debug(f"Executed add_flag action: {flag}")
 
             elif action.startswith('remove_flag:') or action.startswith('clear_flag:'):
-                # Flag clearing action: remove_flag:flag_name or clear_flag:flag_name
+                # 标志清除动作: remove_flag:flag_name or clear_flag:flag_name
                 flag = action[12:].strip() if action.startswith('remove_flag:') else action[9:].strip()
                 self.state.clear_flag(flag)
                 logger.debug(f"Executed remove_flag action: {flag}")
 
             elif action.startswith('broadcast:'):
-                # Message broadcasting action: broadcast:message
+                # 消息广播动作: broadcast:message
                 message = action[10:].strip('"\'' )
                 logger.info(f"Action broadcast: {message}")
-                # TODO: Add to game message queue for UI display
+                # 添加到游戏消息队列以供界面显示
+                self.state.add_broadcast_message(message)
 
             elif action.startswith('log:'):
-                # Custom logging action: log:message
+                # 自定义日志动作: log:message
                 message = action[4:].strip('"\'' )
                 logger.info(f"Action log: {message}")
 
             else:
-                # Unknown action type - log warning but don't fail
+                # 未知的操作类型 - 记录警告但不失败
                 logger.warning(f"Unknown action: {action}")
 
         except Exception as e:
