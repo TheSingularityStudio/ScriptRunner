@@ -4,7 +4,7 @@ Unit tests for InputHandler.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.domain.runtime.input_handler import InputHandler
+from src.presentation.input.input_handler import InputHandler
 from plugins.player_actions import PlayerActionsPlugin
 from plugins.basic_actions import BasicActionsPlugin
 

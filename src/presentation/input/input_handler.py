@@ -4,7 +4,7 @@ ScriptRunner 的输入处理器。
 """
 
 from typing import Dict, Any, Optional, Callable
-from .interfaces import IInputHandler
+from ...domain.runtime.interfaces import IInputHandler
 from ...infrastructure.logger import get_logger
 from ...infrastructure.config import Config
 from ...infrastructure.container import Container
@@ -305,13 +305,6 @@ class InputHandler(IInputHandler):
             raise ExecutionError(f"无法访问 {target}")
 
         return obj
-
-
-
-
-
-
-
 
     def _get_cached_object(self, obj_id: str) -> Optional[Dict[str, Any]]:
         """获取缓存的对象数据。"""
