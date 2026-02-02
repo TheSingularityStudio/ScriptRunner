@@ -153,9 +153,9 @@ class TestEffectsManager:
 
     def test_execute_single_action_health_damage(self):
         """测试执行生命值伤害动作。"""
-        self.mock_state_manager.get_variable.return_value = 100
+        self.mock_state_manager.get_variable.return_value = {'health': 100}
         self.manager._execute_single_action('player.health -= 5', {})
-        self.mock_state_manager.set_variable.assert_called_with('health', 95)
+        self.mock_state_manager.set_variable.assert_called_with('player', {'health': 95})
 
     def test_execute_single_action_set(self):
         """测试执行设置动作。"""
