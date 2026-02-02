@@ -32,7 +32,7 @@ class ExecutionEngine(IExecutionEngine):
         self.random_manager = random_manager
         self.interaction_manager = interaction_manager
 
-        # Pass event_manager and condition_evaluator to input_handler
+        # 将 event_manager 和 condition_evaluator 传递给 input_handler
         input_handler.event_manager = self.event_manager
         input_handler.condition_evaluator = self.condition_evaluator
         self.input_handler = input_handler

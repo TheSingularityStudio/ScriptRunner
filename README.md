@@ -28,7 +28,7 @@ ScriptRunner 是一个简单的基于文本的游戏引擎，用于运行 YAML �
 1. 克隆仓库：
    ```bash
    git clone https://github.com/TheSingularityStudio/ScriptRunner.git
-   cd scriptrunner
+   cd ScriptRunner
    ```
 
 2. 安装依赖：
@@ -52,7 +52,7 @@ python main.py scripts/your_game.yaml
 
 ### 游戏脚本格式
 
-游戏脚本使用 YAML 格式定义。查看 `scripts/example_game.yaml` 获取完整示例。
+游戏脚本使用 YAML 格式定义。查看 `scripts/main.yaml` 获取完整示例。
 
 基本结构：
 ```yaml
@@ -74,7 +74,7 @@ locations:
 
 ## 示例
 
-项目包含一个示例游戏 `scripts/example_game.yaml`（洞穴冒险），演示了以下特性：
+项目包含一个示例游戏 `scripts/main.yaml`（洞穴冒险），演示了以下特性：
 
 - 洞穴入口和主室场景
 - 哥布林敌人
@@ -85,14 +85,13 @@ locations:
 
 运行示例：
 ```bash
-python main.py scripts/example_game.yaml
+python main.py scripts/main.yaml
 ```
 
 ## 文档
 
 - [DSL 语法手册](docs/syntax_manual.md) - 完整的 DSL 语法指南
 - [架构文档](docs/architecture.md) - 系统架构说明
-- [示例脚本](scripts/example_game.yaml) - 洞穴冒险示例脚本
 
 ## 测试
 

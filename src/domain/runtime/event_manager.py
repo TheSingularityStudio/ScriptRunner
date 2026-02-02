@@ -136,7 +136,8 @@ class EventManager(IEventManager):
             logger.info(f"Transformation triggered: {transform_spec}")
         elif action.startswith('broadcast:'):
             message = action[10:].strip('"\'' )
-            # 这里可以添加到消息队列
+            # 添加到游戏消息队列以供界面显示
+            self.state.add_broadcast_message(message)
             logger.info(f"Broadcast message: {message}")
         elif action == 'log:':
             message = event.get('message', 'Event logged')

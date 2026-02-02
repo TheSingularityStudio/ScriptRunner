@@ -8,6 +8,7 @@ import time
 from .interfaces import IEffectsManager
 from ...infrastructure.logger import get_logger
 from .action_executor import ActionExecutor
+from ...utils.expression_evaluator import ExpressionEvaluator
 
 logger = get_logger(__name__)
 
@@ -132,25 +133,24 @@ class EffectsManager(IEffectsManager):
 
     def get_effect_modifier(self, stat_name: str, target: Optional[str] = None) -> float:
         """
-        Calculate the total modifier for a specific stat from all active effects.
+        计算特定属性从所有有效效果中获得的总修改值。
 
-        This method aggregates modifiers from all effects applied to a target (default: player).
-        Modifiers can be additive (+5, -2), multiplicative (*1.1), or direct numeric values.
-        The order of application is important for multiplicative modifiers.
+        此方法汇总作用于目标（默认：player）的所有效果的修改值。
+        修改值可以是加法（5，-2）、乘法（*1.1）或直接数值。
+        应用顺序对于乘法修改值非常重要。
 
         Args:
-            stat_name: The name of the stat to get modifiers for (e.g., 'strength', 'health')
-            target: The target entity name, defaults to 'player' if None
+            stat_name: 要获取修正值的属性名称 (例如, 'strength', 'health')
+            target: 目标实体名称，如果为 None，则默认为 'player'
 
         Returns:
-            The total modifier value to apply to the stat. For multiplicative modifiers,
-            this returns the combined multiplier (e.g., 1.1 for 10% increase)
+            应用于属性的总修改器数值。对于乘法修改器，这会返回合并后的乘数（例如，10% 增加对应 1.1）
 
         Note:
-            - Additive modifiers (+/-) are summed directly
-            - Multiplicative modifiers (*) are multiplied together
-            - Direct numeric values are treated as additive
-            - Complex stat calculations should be handled by the caller
+            - 加成修正（ /-）直接相加
+            - 乘法修正（*）相乘
+            - 直接数值视为加成
+            - 复杂的属性计算应由调用方处理
         """
         total_modifier = 0.0
         effects = self.get_active_effects(target)
@@ -160,24 +160,24 @@ class EffectsManager(IEffectsManager):
             if stat_name in modifiers:
                 modifier_value = modifiers[stat_name]
 
-                # Handle different modifier types based on string prefixes or direct values
+                # 根据字符串前缀或直接值处理不同类型的修饰符
                 if isinstance(modifier_value, str):
                     if modifier_value.startswith('*'):
-                        # Multiplicative modifier, e.g., "*1.1" for 10% increase
+                        # 乘法修饰符，例如，"*1.1"表示增加10%
                         multiplier = float(modifier_value[1:])
-                        # Multiply existing modifiers (starts at 1.0 for multiplication)
+                        # 乘以现有的修饰符（乘法初始值为 1.0）
                         if total_modifier == 0.0:
                             total_modifier = multiplier
                         else:
                             total_modifier *= multiplier
                     elif modifier_value.startswith('+'):
-                        # Additive modifier, e.g., "+2" to add 2
+                        # 加法修饰符，例如，“2”表示加2
                         total_modifier += float(modifier_value[1:])
                     elif modifier_value.startswith('-'):
-                        # Subtractive modifier, e.g., "-1" to subtract 1
+                        # 减法修饰符，例如：“-1”表示减去1
                         total_modifier -= float(modifier_value[1:])
                 elif isinstance(modifier_value, (int, float)):
-                    # Direct numeric modifier, treated as additive
+                    # 直接数值修饰符，视为加法
                     total_modifier += modifier_value
 
         return total_modifier
@@ -205,17 +205,21 @@ class EffectsManager(IEffectsManager):
                     damage_str = parts[1].strip()
                     # 支持表达式，如 "5" 或 "strength * 2"
                     damage = self._parse_damage_expression(damage_str, effect_data)
-                    current_health = self.state.get_variable('health', 100)
+                    player = self.state.get_variable('player', {'health': 100})
+                    current_health = player.get('health', 100)
                     new_health = max(0, current_health - damage)
-                    self.state.set_variable('health', new_health)
+                    player['health'] = new_health
+                    self.state.set_variable('player', player)
                     logger.debug(f"Effect damage: {damage}, health now {new_health}")
                 elif '+=' in action:
                     parts = action.split('+=', 1)
                     heal_str = parts[1].strip()
                     heal = self._parse_damage_expression(heal_str, effect_data)
-                    current_health = self.state.get_variable('health', 100)
+                    player = self.state.get_variable('player', {'health': 100})
+                    current_health = player.get('health', 100)
                     new_health = current_health + heal
-                    self.state.set_variable('health', new_health)
+                    player['health'] = new_health
+                    self.state.set_variable('player', player)
                     logger.debug(f"Effect heal: {heal}, health now {new_health}")
             else:
                 # 使用统一的动作执行器处理其他动作
@@ -225,14 +229,38 @@ class EffectsManager(IEffectsManager):
             logger.error(f"Error executing effect action '{action}': {e}")
 
     def _parse_damage_expression(self, damage_str: str, effect_data: Dict[str, Any]) -> int:
-        """解析伤害表达式，支持数字和简单表达式。"""
+        """解析伤害表达式，支持数字和复杂表达式。"""
         try:
             # 尝试直接转换为整数
             return int(damage_str)
         except ValueError:
-            # 如果是表达式，暂时返回默认值（可以扩展为支持更复杂的表达式）
-            logger.warning(f"Complex damage expression '{damage_str}' not supported, using default 5")
-            return 5
+            # 构建表达式评估上下文
+            context = {}
+
+            # 添加玩家属性
+            player = self.state.get_variable('player', {})
+            if isinstance(player, dict):
+                context['player'] = player
+
+            # 添加效果数据
+            context['effect'] = effect_data
+
+            # 添加其他常用游戏状态变量
+            common_vars = ['strength', 'health', 'max_health', 'level', 'experience', 'game_time']
+            for var in common_vars:
+                value = self.state.get_variable(var)
+                if value is not None:
+                    context[var] = value
+
+            # 使用表达式评估器评估复杂表达式
+            result = ExpressionEvaluator.evaluate_expression(damage_str, context)
+
+            # 确保结果是整数
+            try:
+                return int(result)
+            except (TypeError, ValueError):
+                logger.warning(f"Expression '{damage_str}' did not evaluate to a number, using default 5")
+                return 5
 
     def get_status_message(self) -> str:
         """获取效果状态消息。"""

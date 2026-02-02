@@ -1,0 +1,50 @@
+# 随机系统 - 定义随机事件和掉落
+random_system:
+  tables:
+    # 哥布林掉落表
+    goblin_loot:
+      - item: "gold"           # 掉落金币
+        weight: 70            # 权重70%
+        count: [1, 3]         # 数量1-3个
+      - item: "health_potion"  # 掉落药水
+        weight: 30            # 权重30%
+        count: 1              # 数量1个
+
+    # 兽人掉落表
+    orc_loot:
+      - item: "gold"           # 掉落金币
+        weight: 50            # 权重50%
+        count: [2, 5]         # 数量2-5个
+      - item: "magic_crystal"  # 掉落魔法水晶
+        weight: 30            # 权重30%
+        count: 1              # 数量1个
+      - item: "key"            # 掉落钥匙
+        weight: 20            # 权重20%
+        count: 1              # 数量1个
+
+    # 玩家攻击伤害表
+    player_attack_damage:
+      - value: 5
+        weight: 30
+      - value: 7
+        weight: 40
+      - value: 10
+        weight: 30
+
+    # 敌人攻击伤害表（通用）
+    enemy_attack_damage:
+      - value: 3
+        weight: 40
+      - value: 5
+        weight: 40
+      - value: 7
+        weight: 20
+
+    # 兽人攻击伤害表
+    orc_attack_damage:
+      - value: 6
+        weight: 30
+      - value: 8
+        weight: 40
+      - value: 12
+        weight: 30

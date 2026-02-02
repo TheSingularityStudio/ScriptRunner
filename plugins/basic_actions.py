@@ -196,5 +196,7 @@ class BasicActionsPlugin(ActionPlugin):
             actions.append(f"parse_and_set:{result_var}={result}")
         elif result_var and isinstance(result, dict) and 'item' in result:
             actions.append(f"parse_and_set:{result_var}={result['item']}")
+        elif result_var and isinstance(result, dict) and 'value' in result:
+            actions.append(f"parse_and_set:{result_var}={result['value']}")
         
         return {'success': True, 'message': message, 'actions': actions}

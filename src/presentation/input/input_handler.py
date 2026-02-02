@@ -4,7 +4,7 @@ ScriptRunner 的输入处理器。
 """
 
 from typing import Dict, Any, Optional, Callable
-from .interfaces import IInputHandler
+from ...domain.runtime.interfaces import IInputHandler
 from ...infrastructure.logger import get_logger
 from ...infrastructure.config import Config
 from ...infrastructure.container import Container
@@ -38,15 +38,19 @@ class InputHandler(IInputHandler):
         self.action_handlers: Dict[str, Callable[[str], Dict[str, Any]]] = {}
         self._load_actions_from_plugins()
 
-        # 从配置加载组合配方
-        self.combine_recipes = self.config.get('game.combine_recipes', {
-            'herb_potion': ['herb', 'bottle'],
-            'sword_dagger': ['sword', 'dagger'],
-        })
+        # 从脚本加载组合配方（将在第一次访问parser时设置）
+        self._combine_recipes = None
 
         # 缓存常用数据
         self._scene_cache: Dict[str, Any] = {}
         self._object_cache: Dict[str, Any] = {}
+
+    @property
+    def combine_recipes(self):
+        """获取组合配方。"""
+        if self._combine_recipes is None:
+            self._combine_recipes = self.config.get('game.combine_recipes', {})
+        return self._combine_recipes
 
     def _load_actions_from_plugins(self):
         """从插件加载动作处理器。"""
@@ -77,6 +81,7 @@ class InputHandler(IInputHandler):
             'condition_evaluator': self.condition_evaluator,
             'interaction_manager': self.interaction_manager,
             'action_executor': self.action_executor,
+            'input_handler': self,
             'is_object_accessible': self._is_object_accessible,
         }
 
@@ -167,8 +172,15 @@ class InputHandler(IInputHandler):
                     'action': action
                 }
 
+            # 解析代词
+            target = self._resolve_pronoun(target)
+
             # 执行动作
             result = self._execute_action(action, target)
+
+            # 如果动作执行成功且有目标，更新last_object
+            if result['success'] and target:
+                self.state.set_variable('last_object', target)
 
             # 如果动作执行成功，触发事件
             if result['success'] and self.event_manager:
@@ -223,6 +235,13 @@ class InputHandler(IInputHandler):
             ExecutionError: 当动作执行失败时抛出
         """
         logger.debug(f"Executing action: {action} with target: {target}")
+
+        # 首先检查是否是玩家命令映射到脚本命令
+        player_command = self.parser.get_player_command(action)
+        if player_command:
+            script_command_name = player_command.get('script_command')
+            if script_command_name:
+                return self._execute_script_command(script_command_name, player_command, target)
 
         # 使用可扩展的动作处理器
         handler = self.action_handlers.get(action)
@@ -287,13 +306,6 @@ class InputHandler(IInputHandler):
 
         return obj
 
-
-
-
-
-
-
-
     def _get_cached_object(self, obj_id: str) -> Optional[Dict[str, Any]]:
         """获取缓存的对象数据。"""
         if obj_id not in self._object_cache:
@@ -333,6 +345,85 @@ class InputHandler(IInputHandler):
                 return True
 
         return False
+
+    def _execute_script_command(self, script_command_name: str, player_command: Dict[str, Any], target: str) -> Dict[str, Any]:
+        """
+        执行脚本命令。
+
+        Args:
+            script_command_name: 脚本命令名称
+            player_command: 玩家命令配置
+            target: 目标对象
+
+        Returns:
+            执行结果字典
+        """
+        logger.debug(f"Executing script command: {script_command_name} with player_command: {player_command}")
+
+        # 获取脚本命令定义
+        script_command = self.parser.get_command(script_command_name)
+        if not script_command:
+            raise ExecutionError(f"未知脚本命令: {script_command_name}")
+
+        # 获取玩家命令的参数
+        parameters = player_command.get('parameters', {})
+        target_required = player_command.get('target_required', False)
+
+        # 验证目标要求
+        if target_required and not target:
+            raise ExecutionError("此命令需要指定目标")
+
+        # 构建命令值，替换参数中的占位符
+        command_value = parameters.get('message', '')
+        if '{target}' in command_value:
+            command_value = command_value.replace('{target}', target or '')
+        if '{target_description}' in command_value:
+            obj = self.parser.get_object(target) if target else None
+            description = obj.get('description', f'一个{target}') if obj else '这里什么都没有'
+            command_value = command_value.replace('{target_description}', description)
+        if '{inventory_list}' in command_value:
+            inventory = self.state.get_variable('inventory', [])
+            if inventory:
+                items_str = ', '.join(inventory)
+                command_value = command_value.replace('{inventory_list}', items_str)
+            else:
+                command_value = command_value.replace('{inventory_list}', '空')
+
+        # 构建命令字典
+        command = {script_command_name: command_value}
+
+        # 执行命令
+        try:
+            messages = self.command_executor.execute_command(command)
+            message = '\n'.join(messages) if messages else '命令执行完成'
+            return {'success': True, 'message': message, 'actions': []}
+        except Exception as e:
+            logger.error(f"Error executing script command {script_command_name}: {e}")
+            raise ExecutionError(f"执行脚本命令 '{script_command_name}' 时出错") from e
+
+    def _resolve_pronoun(self, target: str) -> str:
+        """
+        解析代词，返回实际的对象ID。
+
+        Args:
+            target: 可能包含代词的目标字符串
+
+        Returns:
+            解析后的目标字符串
+        """
+        if not target:
+            return target
+
+        # 检查是否是代词
+        if target == 'last_object':
+            resolved = self.state.get_variable('last_object')
+            if resolved:
+                return resolved
+            else:
+                raise ExecutionError("没有可用的上一个对象")
+
+        # 可以扩展其他代词解析逻辑
+        return target
 
     def _remove_object_from_scene(self, obj_id: str):
         """从当前场景中移除对象。"""

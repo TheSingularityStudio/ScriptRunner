@@ -1,0 +1,146 @@
+# 命令解析器 - 定义如何解析玩家的自然语言输入
+command_parser:
+  verbs:
+    # 拿取命令
+    take:
+      patterns: ["拿", "拿起", "取", "捡起"]  # 中文模式
+      aliases: ["get", "pick"]               # 英文别名
+
+    # 使用命令
+    use:
+      patterns: ["使用", "用", "喝"]  # 中文模式
+      aliases: ["utilize"]           # 英文别名
+
+    # 攻击命令
+    attack:
+      patterns: ["攻击", "打", "杀", "砍"]  # 中文模式
+      aliases: ["fight", "hit"]            # 英文别名
+
+    # 查看命令
+    look:
+      patterns: ["看", "查看", "观察", "检查"]  # 中文模式
+      aliases: ["examine", "inspect"]          # 英文别名
+
+    # 查看背包命令
+    inventory:
+      patterns: ["查看背包", "背包", "查看物品"]  # 中文模式
+      aliases: ["inventory", "inv", "bag"]       # 英文别名
+
+    # 打开命令
+    open:
+      patterns: ["打开", "开"]  # 中文模式
+      aliases: ["unlock"]       # 英文别名
+
+  nouns:
+    # 代词
+    pronouns:
+      它: "last_object"      # 指代上一个对象
+      他: "last_character"   # 指代上一个角色
+      她: "last_character"   # 指代上一个角色
+
+    # 对象别名
+    objects:
+      剑: "rusty_sword"      # 剑的别名
+      宝箱: "treasure_chest"  # 宝箱的别名
+      哥布林: "goblin"       # 哥布林的别名
+      金币: "gold"           # 金币的别名
+      药水: "health_potion"  # 药水的别名
+
+# 命令定义 - 定义脚本中使用的命令及其执行逻辑
+commands:
+  # 掷骰命令 - 使用随机表系统
+  roll_dice:
+    actions:
+      - roll_table
+
+  # 显示消息命令 - 直接显示消息文本
+  show_message:
+    actions:
+      - message: "{value}"
+
+  # 添加物品命令 - 添加物品到玩家背包
+  add_item:
+    actions:
+      - add_item
+
+  # 设置变量命令 - 设置游戏变量
+  set_variable:
+    actions:
+      - set_variable
+
+  # 添加标志命令 - 设置游戏标志
+  add_flag:
+    actions:
+      - set_flag
+
+  # 设置变量命令 - 解析并设置变量 (用于状态机和效果)
+  set:
+    actions:
+      - parse_and_set
+
+  # 应用效果命令 - 应用效果到玩家
+  apply_effect:
+    actions:
+      - apply_effect
+
+# 玩家命令映射 - 将玩家动词映射到脚本命令
+player_commands:
+  # 拿取命令 - 映射到添加物品
+  take:
+    script_command: "add_item"
+    target_required: true
+    parameters:
+      item_id: "{target}"  # 使用目标对象ID
+
+  # 使用命令 - 映射到应用效果
+  use:
+    script_command: "apply_effect"
+    target_required: true
+    parameters:
+      effect_id: "{target}_effect"  # 根据物品类型应用对应效果，如 health_potion_effect
+
+  # 攻击命令 - 映射到应用效果 (应用伤害效果)
+  attack:
+    script_command: "apply_effect"
+    target_required: true
+    parameters:
+      effect_id: "damage_effect"  # 应用伤害效果
+
+  # 查看命令 - 映射到显示消息 (显示对象描述)
+  look:
+    script_command: "show_message"
+    target_required: false
+    parameters:
+      message: "你看到：{target_description}"  # 显示目标描述，如果无目标则显示场景
+
+  # 查看背包命令 - 映射到显示消息 (显示背包内容)
+  inventory:
+    script_command: "show_message"
+    target_required: false
+    parameters:
+      message: "你的背包：{inventory_list}"  # 显示背包物品列表
+
+  # 打开命令 - 映射到应用效果 (应用打开效果，可能解锁或显示内容)
+  open:
+    script_command: "apply_effect"
+    target_required: true
+    parameters:
+      effect_id: "open_effect"  # 应用打开效果
+
+# 错误处理 - 定义无效输入或缺失参数时的处理方式
+error_handling:
+  invalid_command:
+    message: "我不明白你的意思。请尝试其他命令。"
+    fallback: "help"
+
+  missing_target:
+    message: "你需要指定一个目标。"
+    fallback: "look"
+
+  invalid_target:
+    message: "这里没有那个东西。"
+    fallback: "look"
+
+  command_failed:
+    message: "命令执行失败。"
+    fallback: "look"

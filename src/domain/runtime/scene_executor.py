@@ -90,7 +90,7 @@ class SceneExecutor(ISceneExecutor):
 
     def _replace_variables(self, text: str) -> str:
         """替换文本中的 DSL 变量。"""
-        # Get all variables from state manager
+        # 从状态管理器获取所有变量
         variables = self.state.get_all_variables()
 
         for var_name, var_value in variables.items():

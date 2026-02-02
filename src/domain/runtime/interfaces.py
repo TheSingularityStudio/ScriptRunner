@@ -157,6 +157,51 @@ class IMetaManager(ABC):
         """设置元数据值。"""
         pass
 
+    @abstractmethod
+    def evaluate_macro(self, macro_name: str, **kwargs) -> bool:
+        """评估宏条件。"""
+        pass
+
+    @abstractmethod
+    def generate_dynamic_script(self, script_name: str, **parameters) -> Optional[Dict[str, Any]]:
+        """生成动态脚本。"""
+        pass
+
+    @abstractmethod
+    def execute_dynamic_script(self, script_name: str, **kwargs) -> Any:
+        """执行动态脚本。"""
+        pass
+
+    @abstractmethod
+    def get_macro_names(self) -> List[str]:
+        """获取所有宏名称。"""
+        pass
+
+    @abstractmethod
+    def get_dynamic_script_names(self) -> List[str]:
+        """获取所有动态脚本名称。"""
+        pass
+
+    @abstractmethod
+    def has_macro(self, macro_name: str) -> bool:
+        """检查宏是否存在。"""
+        pass
+
+    @abstractmethod
+    def has_dynamic_script(self, script_name: str) -> bool:
+        """检查动态脚本是否存在。"""
+        pass
+
+    @abstractmethod
+    def validate_macro(self, macro_name: str) -> bool:
+        """验证宏定义。"""
+        pass
+
+    @abstractmethod
+    def validate_dynamic_script(self, script_name: str) -> bool:
+        """验证动态脚本定义。"""
+        pass
+
 
 class IRandomManager(ABC):
     """随机管理器接口。"""

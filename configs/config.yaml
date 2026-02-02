@@ -13,9 +13,7 @@ game:
   default_creature_health: 30  # 默认生物生命值
   base_damage: 5  # 基础伤害
   strength_damage_multiplier: 0.5  # 力量伤害倍数
-  combine_recipes:  # 组合配方
-    herb_potion: ['herb', 'bottle']
-    sword_dagger: ['sword', 'dagger']
+
 
 # 消息配置
 messages:
@@ -36,16 +34,3 @@ ui:
 plugins:
   enabled: []  # 启用的插件列表
   directory: plugins  # 插件目录路径
-
-# 其他可选配置
-# database:
-#   type: json  # 数据库类型: json, sqlite (未来支持)
-#   path: data/  # 数据库文件路径
-
-# network:
-#   timeout: 30  # 网络超时时间（秒）
-#   retries: 3   # 重试次数
-
-# performance:
-#   max_memory: 512MB  # 最大内存使用
-#   thread_pool_size: 4  # 线程池大小

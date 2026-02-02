@@ -15,50 +15,65 @@ class ExpressionEvaluator:
     @staticmethod
     def evaluate_expression(expression: str, context: Dict[str, Any]) -> Any:
         """
-        Safely evaluate a mathematical or logical expression with limited context.
+        在有限的上下文中安全地评估数学或逻辑表达式。
 
         Args:
-            expression: The expression string to evaluate
-            context: Dictionary containing variables available in the expression
+            expression: 要计算的表达式字符串
+            context: 包含表达式中可用变量的字典
 
         Returns:
-            The result of the expression evaluation, or 0 if evaluation fails
+            表达式计算的结果，如果计算失败则为 0
         """
-        # Create a safe context that allows dictionary access via dot notation
+        # 如果存在，去掉大括号（用于表示变量替换）
+        expression = expression.strip('{}')
+
+        # 创建一个允许通过点符号访问字典的安全环境
         class DotDict(dict):
-            """Dictionary subclass that allows attribute-style access for dot notation."""
+            """字典子类，允许使用点符号进行属性式访问。"""
             def __getattr__(self, key):
                 return self[key]
 
         def is_safe_value(v):
-            """Check if a value is safe to include in the evaluation context."""
+            """检查一个值是否可以安全地包含在评估上下文中。"""
             if isinstance(v, (int, float, bool)):
                 return True
             elif isinstance(v, dict):
-                # Ensure all nested values are also safe
+                # 确保所有嵌套的值也安全
                 return all(isinstance(sub_v, (int, float, bool)) for sub_v in v.values())
             return False
 
         safe_context = {}
         for k, v in context.items():
             if isinstance(v, dict):
-                # Wrap dictionaries to support dot notation (e.g., player.health)
+                # 封装字典以支持点符号访问（例如，player.health）
                 safe_context[k] = DotDict(v)
             elif is_safe_value(v):
                 safe_context[k] = v
 
-        # Add random function for dice rolls and similar mechanics
+        # 为掷骰子和类似机制添加随机功能
         import random
         safe_context['random'] = random.randint
 
-        # Evaluate the expression in the restricted environment
+        # 定义安全的内置函数
+        safe_builtins = {
+            'max': max,
+            'min': min,
+            'abs': abs,
+            'round': round,
+            'int': int,
+            'float': float,
+            'bool': bool,
+            'str': str,
+        }
+
+        # 在受限环境中求值该表达式
         try:
-            return eval(expression, {"__builtins__": {}}, safe_context)
+            return eval(expression, {"__builtins__": safe_builtins}, safe_context)
         except (NameError, TypeError, SyntaxError, ZeroDivisionError) as e:
-            # Log expected evaluation errors (invalid syntax, undefined variables, etc.)
+            # 记录预期的评估错误（无效语法、未定义变量等）
             logger.error(f"Error evaluating expression '{expression}': {e}")
             return 0
         except Exception as e:
-            # Catch any unexpected errors during evaluation
+            # 在评估过程中捕获任何意外错误
             logger.error(f"Unexpected error evaluating expression '{expression}': {e}")
             return 0

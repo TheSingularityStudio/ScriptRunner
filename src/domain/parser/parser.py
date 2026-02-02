@@ -24,11 +24,12 @@ class ScriptParser(IScriptParser):
         self.state_machines = {}  # DSL state machines
         self.effects = {}  # DSL effects
         self.commands = {}  # DSL commands
+        self.player_commands = {}  # DSL player commands
         self.interaction = {}  # DSL interaction
         self.meta = {}  # DSL meta
 
     def load_script(self, file_path: str) -> Dict[str, Any]:
-        """加载并解析YAML脚本文件，支持DSL语法。"""
+        """加载并解析YAML脚本文件，支持DSL语法和includes。"""
         logger.info(f"Loading script from file: {file_path}")
         if not os.path.exists(file_path):
             logger.error(f"Script file not found: {file_path}")
@@ -38,10 +39,48 @@ class ScriptParser(IScriptParser):
             self.script_data = yaml.safe_load(file)
 
         logger.debug(f"Script data loaded with {len(self.script_data)} top-level keys")
+
+        # Handle includes
+        if 'includes' in self.script_data:
+            self._load_includes(file_path)
+
         self._validate_script()
         self._parse_dsl_structures()
         logger.info("Script loaded and parsed successfully")
         return self.script_data
+
+    def _load_includes(self, base_file_path: str):
+        """加载并合并包含的文件。"""
+        includes = self.script_data.pop('includes')  # Remove includes from script_data
+        if not isinstance(includes, list):
+            includes = [includes]
+
+        base_dir = os.path.dirname(base_file_path)
+
+        for include_path in includes:
+            # Resolve relative path
+            if not os.path.isabs(include_path):
+                include_path = os.path.join(base_dir, include_path)
+
+            if not os.path.exists(include_path):
+                logger.error(f"Included script file not found: {include_path}")
+                raise FileNotFoundError(f"包含的脚本文件未找到: {include_path}")
+
+            logger.info(f"Loading included script: {include_path}")
+            with open(include_path, 'r', encoding='utf-8') as file:
+                include_data = yaml.safe_load(file)
+
+            # Merge include_data into script_data, with script_data taking precedence
+            self._merge_dicts(self.script_data, include_data)
+
+    def _merge_dicts(self, target: Dict[str, Any], source: Dict[str, Any]):
+        """递归合并字典，target优先。"""
+        for key, value in source.items():
+            if key not in target:
+                target[key] = value
+            elif isinstance(target[key], dict) and isinstance(value, dict):
+                self._merge_dicts(target[key], value)
+            # If key exists and both are not dicts, keep target (no overwrite)
 
     def _validate_script(self):
         """脚本结构的初步验证，支持DSL和传统格式。"""
@@ -95,6 +134,9 @@ class ScriptParser(IScriptParser):
             if 'commands' in self.script_data:
                 logger.debug("Parsing DSL commands")
                 self._parse_commands()
+            if 'player_commands' in self.script_data:
+                logger.debug("Parsing DSL player commands")
+                self._parse_player_commands()
             if 'random_system' in self.script_data:
                 logger.debug("Parsing DSL random system")
                 self._parse_random_system()
@@ -110,6 +152,9 @@ class ScriptParser(IScriptParser):
             if 'meta' in self.script_data:
                 logger.debug("Parsing DSL meta")
                 self._parse_meta()
+            if 'recipes' in self.script_data:
+                logger.debug("Parsing DSL recipes")
+                self._parse_recipes()
             logger.debug("DSL structures parsed successfully")
         except Exception as e:
             logger.error(f"Failed to parse DSL structures: {str(e)}")
@@ -149,6 +194,10 @@ class ScriptParser(IScriptParser):
         """解析命令定义。"""
         self.commands = self.script_data['commands']
 
+    def _parse_player_commands(self):
+        """解析玩家命令映射。"""
+        self.player_commands = self.script_data.get('player_commands', {})
+
     def _parse_interaction(self):
         """解析互动系统。"""
         self.interaction = self.script_data['interaction']
@@ -156,6 +205,10 @@ class ScriptParser(IScriptParser):
     def _parse_meta(self):
         """解析元数据。"""
         self.meta = self.script_data['meta']
+
+    def _parse_recipes(self):
+        """解析配方数据。"""
+        self.recipes = self.script_data['recipes']
 
     def get_scene(self, scene_id: str) -> Dict[str, Any]:
         """通过ID获取特定场景，支持DSL和传统格式。"""
@@ -214,6 +267,14 @@ class ScriptParser(IScriptParser):
     def get_command(self, command_name: str) -> Dict[str, Any]:
         """获取命令定义。"""
         return self.commands.get(command_name, {})
+
+    def get_player_command(self, player_action: str) -> Dict[str, Any]:
+        """获取玩家命令映射。"""
+        return self.player_commands.get(player_action, {})
+
+    def get_recipes(self) -> Dict[str, Any]:
+        """获取配方数据。"""
+        return self.recipes
 
     def parse_player_command(self, input_text: str) -> Dict[str, Any]:
         """解析玩家输入命令，返回动作字典。"""
@@ -297,11 +358,18 @@ class ScriptParser(IScriptParser):
 
     def _resolve_target_alias(self, target_text: str) -> str:
         """解析目标的别名，返回标准名称。"""
-        # 检查对象别名
+        # 检查DSL对象别名
         for obj_name, obj_def in self.objects.items():
             aliases = obj_def.get('aliases', [])
             if target_text in aliases or target_text == obj_def.get('name', ''):
                 return obj_name
+
+        # 检查command_parser中的对象别名
+        if self.command_parser_config:
+            objects = self.command_parser_config.get('nouns', {}).get('objects', {})
+            for alias, standard_name in objects.items():
+                if target_text == alias:
+                    return standard_name
 
         return target_text
 

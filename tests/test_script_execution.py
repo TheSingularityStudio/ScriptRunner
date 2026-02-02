@@ -12,13 +12,13 @@ from src.domain.runtime.scene_executor import SceneExecutor
 from src.domain.runtime.script_command_executor import ScriptCommandExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
 from src.domain.runtime.choice_processor import ChoiceProcessor
-from src.domain.runtime.input_handler import InputHandler
+from src.presentation.input.input_handler import InputHandler
 
 
 class TestScriptExecution:
     def setup_method(self):
         """设置测试方法。"""
-        self.script_file = "scripts/example_game.yaml"
+        self.script_file = "scripts/main.yaml"
 
     def test_example_game_script_loads_and_parses(self):
         """测试 example_game.yaml 脚本能否正常加载和解析。"""

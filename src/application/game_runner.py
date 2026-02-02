@@ -43,7 +43,7 @@ class GameRunner:
         print(f"游戏从场景开始: {current_scene_id}")
 
         # 运行游戏循环
-        self._run_game_loop(execution_engine, renderer, current_scene_id)
+        self._run_game_loop(execution_engine, renderer, state_manager, current_scene_id)
 
     def _initialize_application(self):
         """初始化应用程序并返回必要的组件。"""
@@ -94,20 +94,18 @@ class GameRunner:
                 # 检查是否有attributes子字典，或者直接使用player下的属性
                 attributes = player_data.get('attributes', player_data)
                 if isinstance(attributes, dict):
-                    for attr, value in attributes.items():
-                        state_manager.set_variable(attr, value)
+                    # 设置player为字典，包含所有属性
+                    state_manager.set_variable('player', attributes)
                     self.logger.info("Player attributes initialized successfully")
                 else:
                     self.logger.warning("No valid player attributes found in script data, using defaults")
                     # 设置默认玩家属性
-                    state_manager.set_variable('health', 100)
-                    state_manager.set_variable('name', 'Player')
+                    state_manager.set_variable('player', {'health': 100, 'name': 'Player'})
                     self.logger.info("Default player attributes set")
             else:
                 self.logger.warning("No valid player attributes found in script data, using defaults")
                 # 设置默认玩家属性
-                state_manager.set_variable('health', 100)
-                state_manager.set_variable('name', 'Player')
+                state_manager.set_variable('player', {'health': 100, 'name': 'Player'})
                 self.logger.info("Default player attributes set")
         except KeyError as e:
             self.logger.error(f"Error initializing player attributes: {e}")
@@ -116,10 +114,12 @@ class GameRunner:
             self.logger.error(f"Unexpected error during player initialization: {e}")
             raise ScriptError(f"玩家初始化意外错误: {e}")
 
-    def _run_game_loop(self, execution_engine, renderer, current_scene_id: str):
+    def _run_game_loop(self, execution_engine, renderer, state_manager, current_scene_id: str):
         """运行主游戏循环。"""
         invalid_choice_count = 0
         max_invalid_choices = 5  # 限制无效选择次数
+        consecutive_error_count = 0
+        max_consecutive_errors = 3  # 限制连续错误次数
         rerender = True
         while current_scene_id:
             try:
@@ -146,13 +146,20 @@ class GameRunner:
                 # 流程选择
                 next_scene, messages = execution_engine.process_choice(choice_index)
 
-                # 显示命令执行消息
-                if messages:
-                    renderer.show_message('\n'.join(messages))
+                # 获取广播消息
+                broadcast_messages = state_manager.get_broadcast_messages()
+
+                # 合并所有消息
+                all_messages = messages + broadcast_messages
+
+                # 显示所有消息
+                if all_messages:
+                    renderer.show_message('\n'.join(all_messages))
 
                 if next_scene:
                     current_scene_id = next_scene
                     invalid_choice_count = 0  # 重置计数器
+                    consecutive_error_count = 0  # 重置错误计数器
                 elif not messages:
                     # 只有在没有消息（表示无效选择）时才递增计数器
                     invalid_choice_count += 1
@@ -163,6 +170,8 @@ class GameRunner:
                     print(f"\n无效的选择，请重试。 (剩余尝试次数: {max_invalid_choices - invalid_choice_count})")
                     continue
                 # 如果有消息但没有场景变化，认为是有效选择但不推进场景，不递增计数器
+
+                consecutive_error_count = 0  # 重置错误计数器，如果没有异常
 
             except KeyboardInterrupt:
                 self.logger.info("Game interrupted by user during loop")
@@ -182,10 +191,17 @@ class GameRunner:
                     print(f"保存游戏状态失败: {save_error}")
                 break
             except Exception as e:
-                self.logger.error(f"Unexpected error in game loop: {e}")
-                print(f"\n游戏运行中发生意外错误: {e}")
-                print("尝试继续游戏...")
-                # 可以选择继续或退出，这里选择继续，但记录错误
+                consecutive_error_count += 1
+                self.logger.error(f"Unexpected error in game loop (attempt {consecutive_error_count}/{max_consecutive_errors}): {e}")
+                print(f"\n游戏运行中发生意外错误 (第{consecutive_error_count}次): {e}")
+
+                if consecutive_error_count >= max_consecutive_errors:
+                    self.logger.error(f"Too many consecutive errors ({consecutive_error_count}), terminating program")
+                    print(f"\n连续错误次数过多 ({consecutive_error_count})，程序终止。")
+                    raise SystemExit(1)  # 强制退出程序
+                else:
+                    print("尝试继续游戏...")
+                    # 继续循环，但记录错误
 
         print("\n感谢游玩！")
         self.logger.info("Game ended normally")

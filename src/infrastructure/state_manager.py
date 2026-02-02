@@ -1,4 +1,4 @@
-from typing import Dict, Any, Set, Optional
+from typing import Dict, Any, Set, Optional, List
 import json
 import os
 from .logger import get_logger
@@ -15,6 +15,7 @@ class StateManager:
         self.current_scene: str = ""
         self.save_file = save_file or "game_save.json"
         self.active_effects: Dict[str, Dict[str, Any]] = {}  # DSL 效果
+        self.message_queue: List[str] = []  # 广播消息队列
 
     def set_variable(self, key: str, value: Any):
         """设置游戏变量。"""
@@ -102,3 +103,14 @@ class StateManager:
         self.flags.clear()
         self.current_scene = ""
         self.active_effects.clear()
+        self.message_queue.clear()
+
+    def add_broadcast_message(self, message: str):
+        """添加广播消息到队列。"""
+        self.message_queue.append(message)
+
+    def get_broadcast_messages(self) -> List[str]:
+        """获取并清空广播消息队列。"""
+        messages = self.message_queue.copy()
+        self.message_queue.clear()
+        return messages

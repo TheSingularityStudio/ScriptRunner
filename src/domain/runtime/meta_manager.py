@@ -3,9 +3,11 @@ ScriptRunner 的元管理器。
 处理 DSL 元系统的宏定义和动态脚本生成。
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 import re
-from .interfaces import IMetaManager
+import yaml
+from collections import defaultdict, Counter
+from .interfaces import IMetaManager, IRandomManager
 from ...infrastructure.logger import get_logger
 
 logger = get_logger(__name__)
@@ -14,17 +16,31 @@ logger = get_logger(__name__)
 class MetaManager(IMetaManager):
     """管理游戏元系统，包括宏和动态脚本。"""
 
-    def __init__(self, parser, state_manager, condition_evaluator):
+    def __init__(self, parser, state_manager, condition_evaluator, random_manager: Optional[IRandomManager] = None):
         self.parser = parser
         self.state = state_manager
         self.condition_evaluator = condition_evaluator
+        self.random_manager = random_manager
 
         # 元数据存储
         self.macros: Dict[str, str] = {}
         self.dynamic_scripts: Dict[str, Dict[str, Any]] = {}
         self.meta_values: Dict[str, Any] = {}
 
+        # 动态脚本执行器注册
+        self.script_executors: Dict[str, Callable] = {}
+        self._register_default_executors()
+
         logger.info("MetaManager initialized")
+
+    def _register_default_executors(self):
+        """注册默认的动态脚本执行器。"""
+        self.script_executors = {
+            'generate_quest': self._execute_generate_quest,
+            'describe_room': self._execute_describe_room,
+            'generate_name': self._execute_generate_name,
+            'create_item': self._execute_create_item,
+        }
 
     def load_meta_data(self):
         """从解析器加载元数据。"""
@@ -111,12 +127,16 @@ class MetaManager(IMetaManager):
 
         script_config = self.dynamic_scripts[script_name]
 
-        if script_name == 'generate_quest':
-            return self._execute_generate_quest(script_config, **kwargs)
-        elif script_name == 'describe_room':
-            return self._execute_describe_room(script_config, **kwargs)
+        # 使用注册的执行器
+        executor = self.script_executors.get(script_name)
+        if executor:
+            try:
+                return executor(script_config, **kwargs)
+            except Exception as e:
+                logger.error(f"Error executing dynamic script '{script_name}': {e}")
+                return None
         else:
-            logger.warning(f"Unknown dynamic script: {script_name}")
+            logger.warning(f"No executor registered for dynamic script: {script_name}")
             return None
 
     def _execute_generate_quest(self, config: Dict[str, Any], **kwargs) -> Dict[str, Any]:
@@ -124,16 +144,26 @@ class MetaManager(IMetaManager):
         parameters = config.get('parameters', [])
         template = config.get('template', '')
 
-        # 使用随机管理器生成参数
-        # 这里需要访问 random_manager，但当前没有，所以使用简单随机
-        import random
-
         replacements = {}
         for param in parameters:
             if param == 'target':
-                replacements[param] = random.choice(['哥布林', '狼人', '宝藏'])
+                if self.random_manager:
+                    replacements[param] = self.random_manager.get_random_from_table('enemy_types') or '哥布林'
+                else:
+                    import random
+                    replacements[param] = random.choice(['哥布林', '狼人', '宝藏'])
             elif param == 'reward':
-                replacements[param] = random.choice(['金币', '武器', '药水'])
+                if self.random_manager:
+                    replacements[param] = self.random_manager.get_random_from_table('rewards') or '金币'
+                else:
+                    import random
+                    replacements[param] = random.choice(['金币', '武器', '药水'])
+            elif param == 'location':
+                if self.random_manager:
+                    replacements[param] = self.random_manager.get_random_from_table('locations') or '森林'
+                else:
+                    import random
+                    replacements[param] = random.choice(['森林', '山洞', '村庄'])
 
         # 替换模板
         result = template
@@ -159,15 +189,41 @@ class MetaManager(IMetaManager):
 
     def _generate_markov_description(self, training_data: str) -> str:
         """使用马尔可夫链生成描述。"""
-        # 简化实现
-        descriptions = [
-            "这是一个昏暗的房间，墙壁上布满了蜘蛛网。",
-            "房间里散落着古老的书籍和破损的家具。",
-            "空气中弥漫着潮湿的泥土味。",
-            "远处传来滴水的声音。"
-        ]
+        if not training_data:
+            # 默认描述
+            descriptions = [
+                "这是一个昏暗的房间，墙壁上布满了蜘蛛网。",
+                "房间里散落着古老的书籍和破损的家具。",
+                "空气中弥漫着潮湿的泥土味。",
+                "远处传来滴水的声音。"
+            ]
+            import random
+            return random.choice(descriptions)
+
+        # 构建马尔可夫链
+        words = training_data.split()
+        if len(words) < 3:
+            return training_data
+
+        # 创建转移矩阵
+        transitions = defaultdict(Counter)
+        for i in range(len(words) - 1):
+            transitions[words[i]][words[i + 1]] += 1
+
+        # 生成描述
         import random
-        return random.choice(descriptions)
+        current_word = random.choice(words)
+        result = [current_word]
+
+        for _ in range(10):  # 生成最多10个词
+            if current_word not in transitions:
+                break
+            next_words = list(transitions[current_word].keys())
+            weights = list(transitions[current_word].values())
+            current_word = random.choices(next_words, weights=weights)[0]
+            result.append(current_word)
+
+        return ' '.join(result)
 
     def get_meta_value(self, key: str) -> Any:
         """获取元数据值。"""
@@ -177,3 +233,151 @@ class MetaManager(IMetaManager):
         """设置元数据值。"""
         self.meta_values[key] = value
         logger.info(f"Set meta value '{key}' to {value}")
+
+    def validate_macro(self, macro_name: str) -> bool:
+        """验证宏定义。"""
+        if macro_name not in self.macros:
+            logger.warning(f"Macro '{macro_name}' not found for validation")
+            return False
+
+        macro_expr = self.macros[macro_name]
+
+        # 检查基本语法：括号匹配
+        if not self._validate_brace_syntax(macro_expr):
+            logger.error(f"Macro '{macro_name}' has invalid brace syntax")
+            return False
+
+        # 尝试评估宏（使用默认参数）
+        try:
+            # 替换所有参数为默认值进行测试
+            test_expr = re.sub(r'\{([^}]+)\}', '1', macro_expr)
+            self.condition_evaluator.evaluate_condition(test_expr)
+            return True
+        except Exception as e:
+            logger.error(f"Macro '{macro_name}' validation failed: {e}")
+            return False
+
+    def validate_dynamic_script(self, script_name: str) -> bool:
+        """验证动态脚本定义。"""
+        if script_name not in self.dynamic_scripts:
+            logger.warning(f"Dynamic script '{script_name}' not found for validation")
+            return False
+
+        script_def = self.dynamic_scripts[script_name]
+        template = script_def.get('template', '')
+
+        if not template:
+            logger.error(f"Dynamic script '{script_name}' has empty template")
+            return False
+
+        # 检查模板语法
+        if not self._validate_template_syntax(template):
+            logger.error(f"Dynamic script '{script_name}' has invalid template syntax")
+            return False
+
+        # 检查是否有对应的执行器
+        if script_name not in self.script_executors:
+            logger.warning(f"No executor registered for dynamic script '{script_name}'")
+            # 这不是错误，只是警告
+
+        return True
+
+    def _validate_brace_syntax(self, expr: str) -> bool:
+        """验证表达式中的括号语法。"""
+        stack = []
+        for char in expr:
+            if char == '{':
+                stack.append(char)
+            elif char == '}':
+                if not stack:
+                    return False
+                stack.pop()
+        return len(stack) == 0
+
+    def _validate_template_syntax(self, template: str) -> bool:
+        """验证模板语法。"""
+        # 检查未闭合的括号
+        return self._validate_brace_syntax(template)
+
+    def _execute_generate_name(self, config: Dict[str, Any], **kwargs) -> str:
+        """执行名称生成脚本。"""
+        templates = config.get('templates', [])
+        if not templates:
+            return "未知名称"
+
+        if self.random_manager:
+            template = self.random_manager.get_random_from_table('name_templates') or random.choice(templates)
+        else:
+            import random
+            template = random.choice(templates)
+
+        # 替换参数
+        result = template
+        for key, value in kwargs.items():
+            result = result.replace(f'{{{key}}}', str(value))
+
+        return result
+
+    def _execute_create_item(self, config: Dict[str, Any], **kwargs) -> Dict[str, Any]:
+        """执行物品创建脚本。"""
+        item_type = config.get('type', 'generic')
+        properties = config.get('properties', {})
+
+        # 生成物品属性
+        item = {
+            'type': item_type,
+            'name': kwargs.get('name', f'未知{item_type}'),
+            'properties': {}
+        }
+
+        for prop_name, prop_config in properties.items():
+            if isinstance(prop_config, dict):
+                # 从随机表获取
+                table_name = prop_config.get('table')
+                if table_name and self.random_manager:
+                    item['properties'][prop_name] = self.random_manager.get_random_from_table(table_name)
+                else:
+                    item['properties'][prop_name] = prop_config.get('default', 'unknown')
+            else:
+                item['properties'][prop_name] = prop_config
+
+        return item
+
+    def register_script_executor(self, script_name: str, executor: Callable) -> None:
+        """注册自定义脚本执行器。"""
+        self.script_executors[script_name] = executor
+        logger.info(f"Registered custom executor for script '{script_name}'")
+
+    def unregister_script_executor(self, script_name: str) -> None:
+        """注销脚本执行器。"""
+        if script_name in self.script_executors:
+            del self.script_executors[script_name]
+            logger.info(f"Unregistered executor for script '{script_name}'")
+
+    def get_registered_executors(self) -> List[str]:
+        """获取所有注册的执行器名称。"""
+        return list(self.script_executors.keys())
+
+    def save_meta_values(self, file_path: str) -> bool:
+        """保存元数据值到文件。"""
+        try:
+            import json
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(self.meta_values, f, ensure_ascii=False, indent=2)
+            logger.info(f"Saved meta values to {file_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to save meta values: {e}")
+            return False
+
+    def load_meta_values(self, file_path: str) -> bool:
+        """从文件加载元数据值。"""
+        try:
+            import json
+            with open(file_path, 'r', encoding='utf-8') as f:
+                self.meta_values = json.load(f)
+            logger.info(f"Loaded meta values from {file_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to load meta values: {e}")
+            return False

@@ -168,11 +168,8 @@ class PlayerActionsPlugin(ActionPlugin):
 
             inventory = state.get_variable('inventory', [])
 
-            # 从配置获取组合配方
-            combine_recipes = config.get('game.combine_recipes', {
-                'herb_potion': ['herb', 'bottle'],
-                'sword_dagger': ['sword', 'dagger'],
-            })
+            # 从输入处理器获取组合配方
+            combine_recipes = context['input_handler'].combine_recipes
 
             # 检查配方
             for result, ingredients in combine_recipes.items():
@@ -239,14 +236,14 @@ class PlayerActionsPlugin(ActionPlugin):
         """执行添加物品到背包动作。"""
         state = context['state']
         config = context['config']
-        
+
         if not target:
             return {'success': False, 'message': "需要指定要添加的物品。", 'actions': []}
 
         try:
             # 获取当前背包
             inventory = state.get_variable('inventory', [])
-            
+
             # 检查物品是否已经在背包中
             if target in inventory:
                 return {'success': False, 'message': f"你已经拥有 {target}。", 'actions': []}
@@ -254,8 +251,35 @@ class PlayerActionsPlugin(ActionPlugin):
             # 添加物品到背包
             new_inventory = inventory + [target]
             actions = [f"set:inventory={new_inventory}"]
-            
+
             message = config.get('messages.add_item_success', f"获得了 {target}。")
+            message = message.replace('{item}', target)
+            return {'success': True, 'message': message, 'actions': actions}
+
+        except Exception as e:
+            return {'success': False, 'message': str(e), 'actions': []}
+
+    def _execute_remove_item(self, target: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """执行从背包移除物品动作。"""
+        state = context['state']
+        config = context['config']
+
+        if not target:
+            return {'success': False, 'message': "需要指定要移除的物品。", 'actions': []}
+
+        try:
+            # 获取当前背包
+            inventory = state.get_variable('inventory', [])
+
+            # 检查物品是否在背包中
+            if target not in inventory:
+                return {'success': False, 'message': f"你没有 {target}。", 'actions': []}
+
+            # 从背包移除物品
+            new_inventory = [item for item in inventory if item != target]
+            actions = [f"set:inventory={new_inventory}"]
+
+            message = config.get('messages.remove_item_success', f"移除了 {target}。")
             message = message.replace('{item}', target)
             return {'success': True, 'message': message, 'actions': actions}
 

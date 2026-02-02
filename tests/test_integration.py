@@ -15,7 +15,7 @@ from src.domain.runtime.scene_executor import SceneExecutor
 from src.domain.runtime.script_command_executor import ScriptCommandExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
 from src.domain.runtime.choice_processor import ChoiceProcessor
-from src.domain.runtime.input_handler import InputHandler
+from src.presentation.input.input_handler import InputHandler
 
 
 class TestIntegration:

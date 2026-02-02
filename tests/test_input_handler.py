@@ -4,7 +4,7 @@ Unit tests for InputHandler.
 
 import pytest
 from unittest.mock import Mock, patch
-from src.domain.runtime.input_handler import InputHandler
+from src.presentation.input.input_handler import InputHandler
 from plugins.player_actions import PlayerActionsPlugin
 from plugins.basic_actions import BasicActionsPlugin
 
@@ -70,6 +70,7 @@ class TestInputHandler:
         self.mock_parser.get_scene.return_value = None
         self.mock_parser.get_object.return_value = None
         self.mock_parser.get_random_table.return_value = None
+        self.mock_parser.get_player_command.return_value = {'parameters': {}, 'target_required': False}
 
         self.handler = InputHandler(self.mock_container, self.mock_config)
 
@@ -149,6 +150,7 @@ class TestInputHandler:
         """测试成功拿起物品。"""
         obj = {'type': 'item'}
         self.mock_parser.get_object.return_value = obj
+        self.mock_parser.get_player_command.return_value = {'parameters': {'message': '你拿起了 {target}。'}, 'target_required': True}
         self.mock_state_manager.get_variable.side_effect = lambda key, default=None: [] if key == 'inventory' else default
         with patch.object(self.handler, '_is_object_accessible', return_value=True):
             result = self.handler._execute_action('take', 'sword')
@@ -174,6 +176,7 @@ class TestInputHandler:
     def test_execute_use_success(self):
         """测试成功使用物品。"""
         self.mock_state_manager.get_variable.side_effect = lambda key, default=None: ['potion'] if key == 'inventory' else default
+        self.mock_parser.get_object.return_value = {'type': 'item', 'healing': 20}
         result = self.handler._execute_action('use', 'potion')
         assert result['success'] is True
         assert '使用了' in result['message']
