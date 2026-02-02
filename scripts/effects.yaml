@@ -1,0 +1,22 @@
+# 效果系统 - 定义游戏中的各种效果
+effects:
+  # 力量增益效果
+  strength_buff:
+    type: "temporary"     # 临时效果
+    duration: 3          # 持续3回合
+    modifiers:
+      damage: +3         # 增加3点伤害
+    description: "剑术增强，增加攻击力"  # 描述
+
+  # 中毒效果
+  poison:
+    type: "temporary"     # 临时效果
+    duration: 5          # 持续5回合
+    damage_per_turn: 2   # 每回合2点伤害
+    description: "中毒状态，每回合受到伤害"  # 描述
+
+  # 治疗效果
+  healing:
+    type: "instant"       # 即时效果
+    healing: 20          # 恢复20点生命
+    description: "恢复生命值"  # 描述

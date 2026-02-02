@@ -1,0 +1,84 @@
+# 命令解析器 - 定义如何解析玩家的自然语言输入
+command_parser:
+  verbs:
+    # 拿取命令
+    take:
+      patterns: ["拿", "拿起", "取", "捡起"]  # 中文模式
+      aliases: ["get", "pick"]               # 英文别名
+
+    # 使用命令
+    use:
+      patterns: ["使用", "用", "喝"]  # 中文模式
+      aliases: ["utilize"]           # 英文别名
+
+    # 攻击命令
+    attack:
+      patterns: ["攻击", "打", "杀", "砍"]  # 中文模式
+      aliases: ["fight", "hit"]            # 英文别名
+
+    # 查看命令
+    look:
+      patterns: ["看", "查看", "观察", "检查"]  # 中文模式
+      aliases: ["examine", "inspect"]          # 英文别名
+
+    # 查看背包命令
+    inventory:
+      patterns: ["查看背包", "背包", "查看物品"]  # 中文模式
+      aliases: ["inventory", "inv", "bag"]       # 英文别名
+
+    # 打开命令
+    open:
+      patterns: ["打开", "开"]  # 中文模式
+      aliases: ["unlock"]       # 英文别名
+
+  nouns:
+    # 代词
+    pronouns:
+      它: "last_object"      # 指代上一个对象
+      他: "last_character"   # 指代上一个角色
+      她: "last_character"   # 指代上一个角色
+
+    # 对象别名
+    objects:
+      剑: "rusty_sword"      # 剑的别名
+      宝箱: "treasure_chest"  # 宝箱的别名
+      哥布林: "goblin"       # 哥布林的别名
+      金币: "gold"           # 金币的别名
+      药水: "health_potion"  # 药水的别名
+
+# 命令定义 - 定义脚本中使用的命令及其执行逻辑
+commands:
+  # 掷骰命令 - 使用随机表系统
+  roll_dice:
+    actions:
+      - roll_table
+
+  # 显示消息命令 - 直接显示消息文本
+  show_message:
+    actions:
+      - message: "{value}"
+
+  # 添加物品命令 - 添加物品到玩家背包
+  add_item:
+    actions:
+      - add_item
+
+  # 设置变量命令 - 设置游戏变量
+  set_variable:
+    actions:
+      - set_variable
+
+  # 添加标志命令 - 设置游戏标志
+  add_flag:
+    actions:
+      - set_flag
+
+  # 设置变量命令 - 解析并设置变量 (用于状态机和效果)
+  set:
+    actions:
+      - parse_and_set
+
+  # 应用效果命令 - 应用效果到玩家
+  apply_effect:
+    actions:
+      - apply_effect

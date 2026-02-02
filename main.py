@@ -19,13 +19,13 @@ def parse_arguments():
     """Parse command line arguments and return the script file path."""
     logger = get_logger('main')
     if len(sys.argv) == 1:
-        script_file = "scripts/example_game.yaml"
+        script_file = "scripts/main.yaml"
     elif len(sys.argv) == 2:
         script_file = sys.argv[1]
     else:
         logger.error("用法: python main.py [脚本文件]")
-        logger.error("如果不指定脚本文件，将使用默认脚本: scripts/example_game.yaml")
-        logger.error("示例: python main.py scripts/example_game.yaml")
+        logger.error("如果不指定脚本文件，将使用默认脚本: scripts/main.yaml")
+        logger.error("示例: python main.py scripts/main.yaml")
         sys.exit(1)
 
     # 规范化文件路径

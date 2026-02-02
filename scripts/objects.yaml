@@ -1,0 +1,60 @@
+# 对象定义 - 定义游戏中的物品、NPC、容器等
+define_object:
+  # 武器对象
+  rusty_sword:
+    type: "weapon"        # 对象类型
+    name: "生锈的剑"       # 显示名称
+    damage: 8            # 伤害值
+    description: "一把生锈但仍然锋利的剑"  # 描述
+    aliases: ["剑", "铁剑"]  # 别名，用于命令解析
+
+  # 敌人对象
+  goblin:
+    type: "enemy"        # 敌人类型
+    name: "哥布林"       # 名称
+    health: 20          # 生命值
+    damage: 5           # 攻击力
+    loot_table: "goblin_loot"  # 掉落表
+    description: "一个丑陋的绿色哥布林"  # 描述
+
+  # 容器对象
+  treasure_chest:
+    type: "container"    # 容器类型
+    name: "宝箱"         # 名称
+    locked: true        # 是否上锁
+    contents: ["gold", "health_potion"]  # 内容物
+    description: "一个古老的木制宝箱"  # 描述
+
+  # 物品对象
+  gold:
+    type: "item"         # 物品类型
+    name: "金币"         # 名称
+    value: 50           # 价值
+    description: "闪闪发光的金币"  # 描述
+
+  health_potion:
+    type: "item"         # 物品类型
+    name: "治疗药水"     # 名称
+    healing: 20         # 治疗量
+    description: "红色的治疗药水，可以恢复生命值"  # 描述
+
+  # 新增物品
+  magic_crystal:
+    type: "item"         # 物品类型
+    name: "魔法水晶"     # 名称
+    mana_restore: 30    # 魔法恢复
+    description: "蓝色的魔法水晶，可以恢复魔法值"  # 描述
+
+  key:
+    type: "item"         # 物品类型
+    name: "钥匙"         # 名称
+    description: "一把古老的铁钥匙"  # 描述
+
+  # 新增敌人
+  orc:
+    type: "enemy"        # 敌人类型
+    name: "兽人"         # 名称
+    health: 30          # 生命值
+    damage: 8           # 攻击力
+    loot_table: "orc_loot"  # 掉落表
+    description: "一个强壮的绿色兽人"  # 描述

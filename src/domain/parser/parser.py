@@ -28,7 +28,7 @@ class ScriptParser(IScriptParser):
         self.meta = {}  # DSL meta
 
     def load_script(self, file_path: str) -> Dict[str, Any]:
-        """加载并解析YAML脚本文件，支持DSL语法。"""
+        """加载并解析YAML脚本文件，支持DSL语法和includes。"""
         logger.info(f"Loading script from file: {file_path}")
         if not os.path.exists(file_path):
             logger.error(f"Script file not found: {file_path}")
@@ -38,10 +38,48 @@ class ScriptParser(IScriptParser):
             self.script_data = yaml.safe_load(file)
 
         logger.debug(f"Script data loaded with {len(self.script_data)} top-level keys")
+
+        # Handle includes
+        if 'includes' in self.script_data:
+            self._load_includes(file_path)
+
         self._validate_script()
         self._parse_dsl_structures()
         logger.info("Script loaded and parsed successfully")
         return self.script_data
+
+    def _load_includes(self, base_file_path: str):
+        """加载并合并包含的文件。"""
+        includes = self.script_data.pop('includes')  # Remove includes from script_data
+        if not isinstance(includes, list):
+            includes = [includes]
+
+        base_dir = os.path.dirname(base_file_path)
+
+        for include_path in includes:
+            # Resolve relative path
+            if not os.path.isabs(include_path):
+                include_path = os.path.join(base_dir, include_path)
+
+            if not os.path.exists(include_path):
+                logger.error(f"Included script file not found: {include_path}")
+                raise FileNotFoundError(f"包含的脚本文件未找到: {include_path}")
+
+            logger.info(f"Loading included script: {include_path}")
+            with open(include_path, 'r', encoding='utf-8') as file:
+                include_data = yaml.safe_load(file)
+
+            # Merge include_data into script_data, with script_data taking precedence
+            self._merge_dicts(self.script_data, include_data)
+
+    def _merge_dicts(self, target: Dict[str, Any], source: Dict[str, Any]):
+        """递归合并字典，target优先。"""
+        for key, value in source.items():
+            if key not in target:
+                target[key] = value
+            elif isinstance(target[key], dict) and isinstance(value, dict):
+                self._merge_dicts(target[key], value)
+            # If key exists and both are not dicts, keep target (no overwrite)
 
     def _validate_script(self):
         """脚本结构的初步验证，支持DSL和传统格式。"""
