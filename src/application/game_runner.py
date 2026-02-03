@@ -128,15 +128,9 @@ class GameRunner:
         while current_scene_id:
             try:
                 if rerender:
-                    # 创建并执行脚本对象
-                    scene_script = script_factory.create_script_from_scene(current_scene_id)
-                    if scene_script:
-                        scene_data = scene_script.execute_action('render')
-                        renderer.render_scene(scene_data)
-                    else:
-                        # 回退到传统执行
-                        scene_data = execution_engine.execute_scene(current_scene_id)
-                        renderer.render_scene(scene_data)
+                    # 执行场景
+                    scene_data = execution_engine.execute_scene(current_scene_id)
+                    renderer.render_scene(scene_data)
 
                 rerender = True  # 默认重新渲染
 
@@ -148,15 +142,8 @@ class GameRunner:
                     rerender = False
                     continue
 
-                # 使用脚本对象处理选择
-                choice_script = script_factory.create_script_from_choice(current_scene_id, choice_index)
-                if choice_script:
-                    result = choice_script.execute_action('process')
-                    next_scene = result.get('next_scene')
-                    messages = result.get('messages', [])
-                else:
-                    # 回退到传统处理
-                    next_scene, messages = execution_engine.process_choice(choice_index)
+                # 处理选择
+                next_scene, messages = execution_engine.process_choice(choice_index)
 
                 # 获取广播消息
                 broadcast_messages = state_manager.get_broadcast_messages()

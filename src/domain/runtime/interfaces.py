@@ -81,25 +81,6 @@ class IExecutionEngine(ABC):
         pass
 
 
-class IInteractionManager(ABC):
-    """互动管理器接口。"""
-
-    @abstractmethod
-    def start_multi_step_interaction(self, interaction_name: str) -> Dict[str, Any]:
-        """开始多步骤互动。"""
-        pass
-
-    @abstractmethod
-    def process_multi_step_step(self, interaction_name: str, step: int, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """处理多步骤互动的步骤。"""
-        pass
-
-    @abstractmethod
-    def execute_physics_interaction(self, interaction_type: str, **kwargs) -> Dict[str, Any]:
-        """执行物理互动。"""
-        pass
-
-
 class IScriptObject(ABC):
     """脚本对象接口，用于面向对象的脚本执行。"""
 

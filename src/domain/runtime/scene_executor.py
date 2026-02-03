@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 class SceneExecutor(ISceneExecutor):
     """处理场景执行和处理。"""
 
-    def __init__(self, parser, state_manager, command_executor, condition_evaluator, script_object=None):
+    def __init__(self, parser, state_manager, command_executor, condition_evaluator, script_object):
         self.parser = parser
         self.state = state_manager
         self.command_executor = command_executor
@@ -35,14 +35,10 @@ class SceneExecutor(ISceneExecutor):
         # 初始化场景变量
         self._initialize_scene_variables(scene)
 
-        # 如果有脚本对象，触发场景进入事件，否则执行传统命令
-        if self.script_object:
-            event_commands = self.script_object.trigger_event('on_scene_enter', scene_id=scene_id)
-            for cmd in event_commands:
-                self.command_executor.execute_command(cmd)
-        else:
-            # 执行场景命令（传统方式）
-            self.command_executor.execute_commands(scene.get('commands', []))
+        # 触发场景进入事件
+        event_commands = self.script_object.trigger_event('on_scene_enter', scene_id=scene_id)
+        for cmd in event_commands:
+            self.command_executor.execute_command(cmd)
 
         # 处理具有变量替换和条件过滤的场景
         processed_scene = self._process_scene(scene)

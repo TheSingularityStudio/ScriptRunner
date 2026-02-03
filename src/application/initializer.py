@@ -60,6 +60,9 @@ class ApplicationInitializer:
         # 注册状态管理器
         self.container.register('state_manager', StateManager())
 
+        # 注册核心命令执行器
+        self.container.register_factory('core_command_executor', self._create_core_command_executor)
+
         # 注册条件评估器
         self.container.register_factory('condition_evaluator', self._create_condition_evaluator)
 
@@ -101,9 +104,10 @@ class ApplicationInitializer:
         parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
         condition_evaluator = self.container.get('condition_evaluator')
-        plugin_manager = self.container.get('plugin_manager')
+        script_factory = self.container.get('script_factory')
+        core_command_executor = self.container.get('core_command_executor')
         config = self.container.get('config')
-        return ScriptObjectExecutor(parser, state_manager, condition_evaluator, plugin_manager, config)
+        return ScriptObjectExecutor(parser, state_manager, condition_evaluator, script_factory, core_command_executor, config)
 
     def _create_action_executor(self):
         """创建动作执行器的工厂函数。"""
@@ -153,14 +157,10 @@ class ApplicationInitializer:
         condition_evaluator = self.container.get('condition_evaluator')
         choice_processor = self.container.get('choice_processor')
         input_handler = self.container.get('input_handler')
-        interaction_manager = self.container.get('interaction_manager')
-        action_executor = self.container.get('action_executor')
-        script_factory = self.container.get('script_factory')
-        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler, interaction_manager, script_factory, action_executor)
+        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler)
 
         # 设置输入处理器的引用
         input_handler.condition_evaluator = execution_engine.condition_evaluator
-        input_handler.interaction_manager = execution_engine.interaction_manager
 
         return execution_engine
 

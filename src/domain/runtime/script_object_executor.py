@@ -13,11 +13,12 @@ logger = get_logger(__name__)
 class ScriptObjectExecutor(ICommandExecutor):
     """脚本对象执行器，通过脚本对象方法执行命令。"""
 
-    def __init__(self, parser, state_manager, condition_evaluator, script_factory, config=None):
+    def __init__(self, parser, state_manager, condition_evaluator, script_factory, core_command_executor, config=None):
         self.parser = parser
         self.state = state_manager
         self.condition_evaluator = condition_evaluator
         self.script_factory = script_factory
+        self.core_command_executor = core_command_executor
         self.config = config
         self.current_script_object = None
 
@@ -64,8 +65,8 @@ class ScriptObjectExecutor(ICommandExecutor):
                     substituted_cmd = self._substitute_command(cmd, None)
                     messages.extend(self.execute_command(substituted_cmd))
             elif command_type == 'set':
-                # 执行set命令
-                self._execute_set_command(command_value)
+                # 执行 set 命令
+                self.core_command_executor.execute_command(command)
             else:
                 logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:
