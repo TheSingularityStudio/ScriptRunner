@@ -160,3 +160,97 @@ class TestEventManager:
         with patch.object(self.manager, 'check_reactive_events') as mock_check:
             self.manager.trigger_player_action('take', target='sword')
             mock_check.assert_called_with('player_action', action='take', target='sword')
+
+    def test_enable_event(self):
+        """测试启用事件。"""
+        self.manager.scheduled_events = [{'id': 'test_event', 'enabled': False, 'trigger': 'time > 100', 'action': 'spawn_werewolf'}]
+        result = self.manager.enable_event('test_event')
+        assert result is True
+        assert self.manager.scheduled_events[0]['enabled'] is True
+
+    def test_disable_event(self):
+        """测试禁用事件。"""
+        self.manager.scheduled_events = [{'id': 'test_event', 'enabled': True, 'trigger': 'time > 100', 'action': 'spawn_werewolf'}]
+        result = self.manager.disable_event('test_event')
+        assert result is True
+        assert self.manager.scheduled_events[0]['enabled'] is False
+
+    def test_remove_event(self):
+        """测试移除事件。"""
+        self.manager.scheduled_events = [{'id': 'test_event', 'enabled': True, 'trigger': 'time > 100', 'action': 'spawn_werewolf'}]
+        result = self.manager.remove_event('test_event')
+        assert result is True
+        assert len(self.manager.scheduled_events) == 0
+
+    def test_trigger_scene_change(self):
+        """测试触发场景变更。"""
+        with patch.object(self.manager, 'check_reactive_events') as mock_check:
+            self.manager.trigger_scene_change('forest', 'castle')
+            mock_check.assert_called_with('scene_change', old_scene='forest', new_scene='castle')
+
+    def test_trigger_variable_change(self):
+        """测试触发变量变更。"""
+        with patch.object(self.manager, 'check_reactive_events') as mock_check:
+            self.manager.trigger_variable_change('health', 100, 80)
+            mock_check.assert_called_with('variable_change', variable='health', old_value=100, new_value=80)
+
+    def test_register_action_handler(self):
+        """测试注册动作处理器。"""
+        def custom_handler(params):
+            pass
+
+        self.manager.register_action_handler('custom_action', custom_handler)
+        assert 'custom_action' in self.manager.action_handlers
+        assert self.manager.action_handlers['custom_action'] == custom_handler
+
+    def test_get_event_history(self):
+        """测试获取事件历史。"""
+        # 记录一些历史
+        self.manager._record_event_history('test', 'category', {'key': 'value'})
+        history = self.manager.get_event_history()
+        assert len(history) == 1
+        assert history[0]['type'] == 'test'
+        assert history[0]['category'] == 'category'
+
+    def test_validate_events(self):
+        """测试事件验证。"""
+        self.manager.scheduled_events = [
+            {'id': 'valid_event', 'trigger': 'time > 100', 'action': 'spawn_werewolf', 'priority': 'high'},
+            {'id': 'invalid_event', 'trigger': '', 'action': 'spawn_werewolf'},  # 缺少trigger
+            {'id': 'invalid_priority', 'trigger': 'time > 100', 'action': 'spawn_werewolf', 'priority': 'invalid'}
+        ]
+        errors = self.manager.validate_events()
+        assert len(errors) >= 2  # 应该至少有两个错误
+
+    def test_event_prioritization(self):
+        """测试事件优先级排序。"""
+        self.manager.scheduled_events = [
+            {'id': 'low', 'priority': 'low', 'trigger': 'time > 100', 'action': 'log'},
+            {'id': 'high', 'priority': 'high', 'trigger': 'time > 100', 'action': 'log'},
+            {'id': 'medium', 'priority': 'medium', 'trigger': 'time > 100', 'action': 'log'}
+        ]
+        self.manager._sort_events_by_priority()
+        assert self.manager.scheduled_events[0]['priority'] == 'high'
+        assert self.manager.scheduled_events[1]['priority'] == 'medium'
+        assert self.manager.scheduled_events[2]['priority'] == 'low'
+
+    def test_extended_triggers(self):
+        """测试扩展触发器。"""
+        # 测试场景变更触发器
+        assert self.manager._matches_trigger('scene.change', 'scene_change', {}) is True
+
+        # 测试变量变更触发器
+        assert self.manager._matches_trigger('variable.health = 50', 'variable_change', {'variable': 'health', 'new_value': 50}) is True
+
+        # 测试自定义触发器
+        assert self.manager._matches_trigger('custom.battle_start', 'custom', {'custom_type': 'battle_start'}) is True
+
+    def test_action_handler_execution(self):
+        """测试动作处理器执行。"""
+        # 测试已注册的处理器
+        self.manager._execute_single_action('spawn_werewolf:test')
+        self.mock_state_manager.set_variable.assert_called_with('werewolf_spawned', True)
+
+        # 测试未注册的处理器（应该回退到通用执行器）
+        self.manager._execute_single_action('unknown_action:test')
+        self.mock_command_executor.execute_command.assert_called_with({'unknown_action': 'test'})

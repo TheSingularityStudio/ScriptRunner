@@ -85,6 +85,46 @@ class IEventManager(ABC):
         """触发玩家动作事件。"""
         pass
 
+    @abstractmethod
+    def enable_event(self, event_id: str) -> bool:
+        """启用指定事件。"""
+        pass
+
+    @abstractmethod
+    def disable_event(self, event_id: str) -> bool:
+        """禁用指定事件。"""
+        pass
+
+    @abstractmethod
+    def remove_event(self, event_id: str) -> bool:
+        """移除指定事件。"""
+        pass
+
+    @abstractmethod
+    def trigger_scene_change(self, old_scene: str, new_scene: str) -> None:
+        """触发场景变更事件。"""
+        pass
+
+    @abstractmethod
+    def trigger_variable_change(self, variable_name: str, old_value: Any, new_value: Any) -> None:
+        """触发变量变更事件。"""
+        pass
+
+    @abstractmethod
+    def register_action_handler(self, action_type: str, handler: callable) -> None:
+        """注册动作处理器。"""
+        pass
+
+    @abstractmethod
+    def get_event_history(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """获取事件历史记录。"""
+        pass
+
+    @abstractmethod
+    def validate_events(self) -> List[str]:
+        """验证所有事件配置。"""
+        pass
+
 
 class IEffectsManager(ABC):
     """效果管理器接口。"""
