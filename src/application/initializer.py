@@ -12,9 +12,9 @@ from src.domain.parser.parser import ScriptParser
 from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
 from src.domain.runtime.scene_executor import SceneExecutor
-from src.domain.runtime.script_command_executor import ScriptCommandExecutor
+from src.domain.runtime.script_object_executor import ScriptObjectExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
-from src.domain.runtime.choice_processor import ChoiceProcessor
+from src.presentation.input.choice_processor import ChoiceProcessor
 from src.presentation.input.input_handler import InputHandler
 from src.presentation.ui.renderer import ConsoleRenderer
 
@@ -103,7 +103,7 @@ class ApplicationInitializer:
         condition_evaluator = self.container.get('condition_evaluator')
         plugin_manager = self.container.get('plugin_manager')
         config = self.container.get('config')
-        return ScriptCommandExecutor(parser, state_manager, condition_evaluator, plugin_manager, config)
+        return ScriptObjectExecutor(parser, state_manager, condition_evaluator, plugin_manager, config)
 
     def _create_action_executor(self):
         """创建动作执行器的工厂函数。"""
