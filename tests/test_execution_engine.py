@@ -5,6 +5,7 @@ Unit tests for ExecutionEngine.
 import pytest
 from unittest.mock import Mock, MagicMock
 from src.domain.runtime.execution_engine import ExecutionEngine
+from src.domain.runtime.script_object import ScriptObject
 
 
 class TestExecutionEngine:
@@ -17,14 +18,10 @@ class TestExecutionEngine:
         self.mock_condition_evaluator = Mock()
         self.mock_choice_processor = Mock()
         self.mock_input_handler = Mock()
-        self.mock_event_manager = Mock()
-        self.mock_effects_manager = Mock()
-        self.mock_state_machine_manager = Mock()
-        self.mock_meta_manager = Mock()
-        self.mock_random_manager = Mock()
+        self.mock_script_factory = Mock()
 
-    def test_initialization(self):
-        """测试 ExecutionEngine 初始化。"""
+    def test_initialization_without_script_factory(self):
+        """测试 ExecutionEngine 初始化（无脚本工厂）。"""
         engine = ExecutionEngine(
             self.mock_parser,
             self.mock_state_manager,
@@ -32,12 +29,7 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler,
-            self.mock_event_manager,
-            self.mock_effects_manager,
-            self.mock_state_machine_manager,
-            self.mock_meta_manager,
-            self.mock_random_manager
+            self.mock_input_handler
         )
 
         assert engine.parser == self.mock_parser
@@ -46,12 +38,28 @@ class TestExecutionEngine:
         assert engine.command_executor == self.mock_command_executor
         assert engine.condition_evaluator == self.mock_condition_evaluator
         assert engine.choice_processor == self.mock_choice_processor
-        assert engine.input_handler == self.mock_input_handler
-        assert engine.event_manager == self.mock_event_manager
-        assert engine.effects_manager == self.mock_effects_manager
-        assert engine.state_machine_manager == self.mock_state_machine_manager
-        assert engine.meta_manager == self.mock_meta_manager
-        assert engine.random_manager == self.mock_random_manager
+        assert engine.script_factory is None
+
+    def test_initialization_with_script_factory(self):
+        """测试 ExecutionEngine 初始化（有脚本工厂）。"""
+        self.mock_parser.script_data = {'variables': {'health': 100}}
+        mock_script = ScriptObject()
+        self.mock_script_factory.create_script_from_yaml.return_value = mock_script
+
+        engine = ExecutionEngine(
+            self.mock_parser,
+            self.mock_state_manager,
+            self.mock_scene_executor,
+            self.mock_command_executor,
+            self.mock_condition_evaluator,
+            self.mock_choice_processor,
+            self.mock_input_handler,
+            script_factory=self.mock_script_factory
+        )
+
+        assert engine.script_factory == self.mock_script_factory
+        self.mock_script_factory.create_script_from_yaml.assert_called_once_with({'variables': {'health': 100}})
+        self.mock_command_executor.set_current_script_object.assert_called_once_with(mock_script)
 
     def test_execute_scene(self):
         """测试场景执行。"""
@@ -62,12 +70,7 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler,
-            self.mock_event_manager,
-            self.mock_effects_manager,
-            self.mock_state_machine_manager,
-            self.mock_meta_manager,
-            self.mock_random_manager
+            self.mock_input_handler
         )
 
         expected_result = {'text': 'Scene content', 'choices': []}
@@ -87,12 +90,7 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler,
-            self.mock_event_manager,
-            self.mock_effects_manager,
-            self.mock_state_machine_manager,
-            self.mock_meta_manager,
-            self.mock_random_manager
+            self.mock_input_handler
         )
 
         expected_next_scene = 'next_scene'
@@ -112,12 +110,7 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler,
-            self.mock_event_manager,
-            self.mock_effects_manager,
-            self.mock_state_machine_manager,
-            self.mock_meta_manager,
-            self.mock_random_manager
+            self.mock_input_handler
         )
 
         self.mock_choice_processor.process_choice.return_value = None
@@ -136,12 +129,7 @@ class TestExecutionEngine:
             self.mock_command_executor,
             self.mock_condition_evaluator,
             self.mock_choice_processor,
-            self.mock_input_handler,
-            self.mock_event_manager,
-            self.mock_effects_manager,
-            self.mock_state_machine_manager,
-            self.mock_meta_manager,
-            self.mock_random_manager
+            self.mock_input_handler
         )
 
         expected_result = {'action': 'move', 'target': 'north'}

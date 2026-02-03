@@ -19,6 +19,11 @@ class ScriptObjectExecutor(ICommandExecutor):
         self.condition_evaluator = condition_evaluator
         self.script_factory = script_factory
         self.config = config
+        self.current_script_object = None
+
+    def set_current_script_object(self, script_object: IScriptObject):
+        """设置当前脚本对象。"""
+        self.current_script_object = script_object
 
     def execute_commands(self, commands: List[Dict[str, Any]]) -> List[str]:
         """执行命令列表并返回所有消息。"""
@@ -44,14 +49,23 @@ class ScriptObjectExecutor(ICommandExecutor):
         logger.debug(f"Executing command: {command_type} = {command_value}")
 
         try:
-            # 使用脚本对象执行命令
-            script_object = self.script_factory.create_script_from_yaml(command)
-            if script_object:
-                result = script_object.execute_action(command_type, value=command_value)
-                if isinstance(result, list):
-                    messages.extend(result)
-                elif isinstance(result, str):
-                    messages.append(result)
+            if command_type == 'action' and self.current_script_object:
+                # 执行脚本动作
+                action_name = command_value['action']
+                kwargs = {k: v for k, v in command_value.items() if k != 'action'}
+                action_commands = self.current_script_object.execute_action(action_name, **kwargs)
+                for cmd in action_commands:
+                    substituted_cmd = self._substitute_command(cmd, command_value.get('value'))
+                    messages.extend(self.execute_command(substituted_cmd))
+            elif command_type == 'event' and self.current_script_object:
+                # 触发脚本事件
+                event_commands = self.current_script_object.trigger_event(command_value)
+                for cmd in event_commands:
+                    substituted_cmd = self._substitute_command(cmd, None)
+                    messages.extend(self.execute_command(substituted_cmd))
+            elif command_type == 'set':
+                # 执行set命令
+                self._execute_set_command(command_value)
             else:
                 logger.warning(f"Unknown command type: {command_type}")
         except Exception as e:
@@ -119,3 +133,60 @@ class ScriptObjectExecutor(ICommandExecutor):
                 break
 
         return value
+
+    def _execute_set_command(self, command_value: str):
+        """执行 set 命令，如 'health = 100' 或 'health += 25'。"""
+        import re
+
+        # 解析命令，支持 = 和 +=
+        match = re.match(r'^\s*(\w+)\s*(\+=|=)\s*(.+)\s*$', command_value)
+        if not match:
+            logger.error(f"Invalid set command: {command_value}")
+            return
+
+        var_name, operator, value_str = match.groups()
+
+        # 解析值，支持数字、字符串、布尔值、变量
+        try:
+            # 如果是数字
+            if value_str.isdigit() or (value_str.startswith('-') and value_str[1:].isdigit()):
+                value = int(value_str)
+            elif value_str.replace('.', '').isdigit() or (value_str.startswith('-') and value_str[1:].replace('.', '').isdigit()):
+                value = float(value_str)
+            elif value_str.lower() == 'true':
+                value = True
+            elif value_str.lower() == 'false':
+                value = False
+            elif value_str.startswith('"') and value_str.endswith('"'):
+                value = value_str[1:-1]  # 移除引号
+            elif value_str.startswith("'") and value_str.endswith("'"):
+                value = value_str[1:-1]  # 移除引号
+            else:
+                # 可能是变量或表达式
+                value = self._get_nested_variable(value_str)
+                if value is None:
+                    value = value_str  # 如果不是变量，保持原样
+        except Exception as e:
+            logger.error(f"Failed to parse value in set command: {value_str}, error: {e}")
+            return
+
+        if operator == '=':
+            self.state.set_variable(var_name, value)
+        elif operator == '+=':
+            current_value = self.state.get_variable(var_name, 0)
+            if isinstance(current_value, (int, float)) and isinstance(value, (int, float)):
+                self.state.set_variable(var_name, current_value + value)
+            else:
+                logger.error(f"Cannot add non-numeric values: {current_value} + {value}")
+
+    def _substitute_command(self, command: Dict[str, Any], command_value: Any) -> Dict[str, Any]:
+        """替换命令字典中的变量占位符。"""
+        substituted = {}
+        for key, value in command.items():
+            if isinstance(value, str):
+                substituted[key] = self._substitute_variables(value, command_value)
+            elif isinstance(value, dict):
+                substituted[key] = self._substitute_command(value, command_value)
+            else:
+                substituted[key] = value
+        return substituted
