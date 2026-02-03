@@ -62,166 +62,6 @@ class IInputHandler(ABC):
         pass
 
 
-class IEventManager(ABC):
-    """事件管理器接口。"""
-
-    @abstractmethod
-    def check_scheduled_events(self) -> None:
-        """检查定时事件。"""
-        pass
-
-    @abstractmethod
-    def check_reactive_events(self, trigger_type: str, **kwargs) -> None:
-        """检查反应事件。"""
-        pass
-
-    @abstractmethod
-    def update_game_time(self, delta_time: float) -> None:
-        """更新游戏时间。"""
-        pass
-
-    @abstractmethod
-    def trigger_player_action(self, action: str, **kwargs) -> None:
-        """触发玩家动作事件。"""
-        pass
-
-
-class IEffectsManager(ABC):
-    """效果管理器接口。"""
-
-    @abstractmethod
-    def apply_effect(self, effect_name: str, target: Optional[str] = None) -> bool:
-        """应用效果。"""
-        pass
-
-    @abstractmethod
-    def remove_effect(self, effect_name: str) -> bool:
-        """移除效果。"""
-        pass
-
-    @abstractmethod
-    def update_effects(self) -> None:
-        """更新效果。"""
-        pass
-
-    @abstractmethod
-    def get_active_effects(self, target: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
-        """获取活跃效果。"""
-        pass
-
-    @abstractmethod
-    def has_effect(self, effect_name: str, target: Optional[str] = None) -> bool:
-        """检查是否有指定效果。"""
-        pass
-
-    @abstractmethod
-    def get_effect_modifier(self, stat_name: str, target: Optional[str] = None) -> float:
-        """获取效果修正值。"""
-        pass
-
-
-class IStateMachineManager(ABC):
-    """状态机管理器接口。"""
-
-    @abstractmethod
-    def load_state_machines(self) -> None:
-        """加载状态机。"""
-        pass
-
-    @abstractmethod
-    def get_current_state(self, machine_name: str) -> Optional[str]:
-        """获取当前状态。"""
-        pass
-
-    @abstractmethod
-    def transition_state(self, machine_name: str, event: str) -> bool:
-        """状态转换。"""
-        pass
-
-
-class IMetaManager(ABC):
-    """元数据管理器接口。"""
-
-    @abstractmethod
-    def load_meta_data(self) -> None:
-        """加载元数据。"""
-        pass
-
-    @abstractmethod
-    def get_meta_value(self, key: str) -> Any:
-        """获取元数据值。"""
-        pass
-
-    @abstractmethod
-    def set_meta_value(self, key: str, value: Any) -> None:
-        """设置元数据值。"""
-        pass
-
-    @abstractmethod
-    def evaluate_macro(self, macro_name: str, **kwargs) -> bool:
-        """评估宏条件。"""
-        pass
-
-    @abstractmethod
-    def generate_dynamic_script(self, script_name: str, **parameters) -> Optional[Dict[str, Any]]:
-        """生成动态脚本。"""
-        pass
-
-    @abstractmethod
-    def execute_dynamic_script(self, script_name: str, **kwargs) -> Any:
-        """执行动态脚本。"""
-        pass
-
-    @abstractmethod
-    def get_macro_names(self) -> List[str]:
-        """获取所有宏名称。"""
-        pass
-
-    @abstractmethod
-    def get_dynamic_script_names(self) -> List[str]:
-        """获取所有动态脚本名称。"""
-        pass
-
-    @abstractmethod
-    def has_macro(self, macro_name: str) -> bool:
-        """检查宏是否存在。"""
-        pass
-
-    @abstractmethod
-    def has_dynamic_script(self, script_name: str) -> bool:
-        """检查动态脚本是否存在。"""
-        pass
-
-    @abstractmethod
-    def validate_macro(self, macro_name: str) -> bool:
-        """验证宏定义。"""
-        pass
-
-    @abstractmethod
-    def validate_dynamic_script(self, script_name: str) -> bool:
-        """验证动态脚本定义。"""
-        pass
-
-
-class IRandomManager(ABC):
-    """随机管理器接口。"""
-
-    @abstractmethod
-    def load_random_tables(self) -> None:
-        """加载随机表。"""
-        pass
-
-    @abstractmethod
-    def roll_dice(self, sides: int) -> int:
-        """掷骰子。"""
-        pass
-
-    @abstractmethod
-    def get_random_from_table(self, table_name: str) -> Any:
-        """从随机表获取随机值。"""
-        pass
-
-
 class IExecutionEngine(ABC):
     """执行引擎接口。"""
 
@@ -257,4 +97,28 @@ class IInteractionManager(ABC):
     @abstractmethod
     def execute_physics_interaction(self, interaction_type: str, **kwargs) -> Dict[str, Any]:
         """执行物理互动。"""
+        pass
+
+
+class IScriptObject(ABC):
+    """脚本对象接口，用于面向对象的脚本执行。"""
+
+    @abstractmethod
+    def get_variable(self, name: str) -> Any:
+        """获取脚本变量。"""
+        pass
+
+    @abstractmethod
+    def set_variable(self, name: str, value: Any) -> None:
+        """设置脚本变量。"""
+        pass
+
+    @abstractmethod
+    def execute_action(self, action_name: str, **kwargs) -> Any:
+        """执行脚本动作。"""
+        pass
+
+    @abstractmethod
+    def trigger_event(self, event_name: str, **kwargs) -> Any:
+        """触发脚本事件。"""
         pass

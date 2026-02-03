@@ -276,6 +276,13 @@ class ScriptParser(IScriptParser):
         """获取配方数据。"""
         return self.recipes
 
+    def create_script_object(self, script_data: Dict[str, Any]):
+        """从脚本数据创建脚本对象实例。"""
+        from ..runtime.script_object import ScriptObject
+        from ..runtime.script_factory import ScriptFactory
+
+        return ScriptFactory.create_script_from_yaml(script_data)
+
     def parse_player_command(self, input_text: str) -> Dict[str, Any]:
         """解析玩家输入命令，返回动作字典。"""
         if not self.command_parser_config:

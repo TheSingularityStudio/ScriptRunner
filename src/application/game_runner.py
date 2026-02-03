@@ -115,23 +115,28 @@ class GameRunner:
             raise ScriptError(f"玩家初始化意外错误: {e}")
 
     def _run_game_loop(self, execution_engine, renderer, state_manager, current_scene_id: str):
-        """运行主游戏循环。"""
+        """运行主游戏循环，使用脚本对象执行。"""
         invalid_choice_count = 0
         max_invalid_choices = 5  # 限制无效选择次数
         consecutive_error_count = 0
         max_consecutive_errors = 3  # 限制连续错误次数
         rerender = True
+
+        # 获取脚本工厂
+        script_factory = self.container.get('script_factory')
+
         while current_scene_id:
             try:
-                # 更新效果状态
-                execution_engine.effects_manager.update_effects()
-
                 if rerender:
-                    # 执行当前场景
-                    scene_data = execution_engine.execute_scene(current_scene_id)
-
-                    # 渲染场景
-                    renderer.render_scene(scene_data)
+                    # 创建并执行脚本对象
+                    scene_script = script_factory.create_script_from_scene(current_scene_id)
+                    if scene_script:
+                        scene_data = scene_script.execute_action('render')
+                        renderer.render_scene(scene_data)
+                    else:
+                        # 回退到传统执行
+                        scene_data = execution_engine.execute_scene(current_scene_id)
+                        renderer.render_scene(scene_data)
 
                 rerender = True  # 默认重新渲染
 
@@ -143,8 +148,15 @@ class GameRunner:
                     rerender = False
                     continue
 
-                # 流程选择
-                next_scene, messages = execution_engine.process_choice(choice_index)
+                # 使用脚本对象处理选择
+                choice_script = script_factory.create_script_from_choice(current_scene_id, choice_index)
+                if choice_script:
+                    result = choice_script.execute_action('process')
+                    next_scene = result.get('next_scene')
+                    messages = result.get('messages', [])
+                else:
+                    # 回退到传统处理
+                    next_scene, messages = execution_engine.process_choice(choice_index)
 
                 # 获取广播消息
                 broadcast_messages = state_manager.get_broadcast_messages()
