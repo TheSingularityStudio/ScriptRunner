@@ -109,8 +109,8 @@ class ApplicationInitializer:
         """创建动作执行器的工厂函数。"""
         state_manager = self.container.get('state_manager')
         command_executor = self.container.get('command_executor')
-        from src.domain.runtime.action_executor import ActionExecutor
-        return ActionExecutor(state_manager, command_executor)
+        from src.domain.runtime.script_action_executor import ScriptActionExecutor
+        return ScriptActionExecutor(state_manager, command_executor)
 
     def _create_scene_executor(self):
         """创建场景执行器的工厂函数。"""
@@ -154,7 +154,9 @@ class ApplicationInitializer:
         choice_processor = self.container.get('choice_processor')
         input_handler = self.container.get('input_handler')
         interaction_manager = self.container.get('interaction_manager')
-        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler, interaction_manager)
+        action_executor = self.container.get('action_executor')
+        script_factory = self.container.get('script_factory')
+        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler, interaction_manager, script_factory, action_executor)
 
         # 设置输入处理器的引用
         input_handler.condition_evaluator = execution_engine.condition_evaluator

@@ -15,7 +15,7 @@ class ExecutionEngine(IExecutionEngine):
     def __init__(self, parser, state_manager, scene_executor: ISceneExecutor,
                  command_executor: ICommandExecutor, condition_evaluator: IConditionEvaluator,
                  choice_processor: IChoiceProcessor, input_handler: IInputHandler,
-                 interaction_manager: IInteractionManager = None, script_factory=None):
+                 interaction_manager: IInteractionManager = None, script_factory=None, action_executor=None):
         self.parser = parser
         self.state = state_manager
         self.scene_executor = scene_executor
@@ -24,16 +24,23 @@ class ExecutionEngine(IExecutionEngine):
         self.choice_processor = choice_processor
         self.interaction_manager = interaction_manager
         self.script_factory = script_factory
+        self.action_executor = action_executor
 
         # 将 condition_evaluator 传递给 input_handler
         input_handler.condition_evaluator = self.condition_evaluator
         self.input_handler = input_handler
 
-        # 创建脚本对象并设置到命令执行器
+        # 创建脚本对象并设置到相关执行器
+        self.script_object = None
         if self.script_factory and hasattr(self.parser, 'script_data'):
             self.script_object = self.script_factory.create_script_from_yaml(self.parser.script_data)
             if hasattr(self.command_executor, 'set_current_script_object'):
                 self.command_executor.set_current_script_object(self.script_object)
+            if hasattr(self.scene_executor, 'script_object'):
+                self.scene_executor.script_object = self.script_object
+            # 设置脚本对象到动作执行器（如果存在）
+            if hasattr(self, 'action_executor') and hasattr(self.action_executor, 'set_script_object'):
+                self.action_executor.set_script_object(self.script_object)
 
         logger.info("ExecutionEngine initialized with simplified dependency injection")
 
