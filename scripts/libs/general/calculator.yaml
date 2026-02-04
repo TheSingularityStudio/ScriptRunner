@@ -1,0 +1,60 @@
+name: "Simple Calculator"
+description: "一个简单的计算器脚本"
+version: "1.0.0"
+
+parameters:
+  - name: num1
+    type: float
+    description: "请输入第一个数字"
+  - name: operation
+    type: str
+    description: "请输入运算符 (+, -, *, /)"
+  - name: num2
+    type: float
+    description: "请输入第二个数字"
+
+script:
+  - if:
+      condition: "operation == '+'"
+      then:
+        - set:
+            variable: result
+            value: "{num1} + {num2}"
+        - print:
+            message: "{num1} + {num2} = {result}"
+      else:
+        - if:
+            condition: "operation == '-'"
+            then:
+              - set:
+                  variable: result
+                  value: "{num1} - {num2}"
+              - print:
+                  message: "{num1} - {num2} = {result}"
+            else:
+              - if:
+                  condition: "operation == '*'"
+                  then:
+                    - set:
+                        variable: result
+                        value: "{num1} * {num2}"
+                    - print:
+                        message: "{num1} * {num2} = {result}"
+                  else:
+                    - if:
+                        condition: "operation == '/'"
+                        then:
+                          - if:
+                              condition: "num2 != 0"
+                              then:
+                                - set:
+                                    variable: result
+                                    value: "{num1} / {num2}"
+                                - print:
+                                    message: "{num1} / {num2} = {result}"
+                              else:
+                                - print:
+                                    message: "错误：除数不能为零！"
+                        else:
+                          - print:
+                              message: "错误：不支持的运算符 '{operation}'"

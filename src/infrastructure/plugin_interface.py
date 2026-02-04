@@ -69,28 +69,28 @@ class EventPlugin(PluginInterface):
     """用于处理事件的插件。"""
 
     @abstractmethod
-    def on_scene_start(self, scene_id: str, context: Dict[str, Any]) -> None:
-        """在场景开始时调用。"""
+    def on_script_section_start(self, section_id: str, context: Dict[str, Any]) -> None:
+        """在脚本段开始时调用。"""
         pass
 
     @abstractmethod
-    def on_scene_end(self, scene_id: str, context: Dict[str, Any]) -> None:
-        """在场景结束时调用。"""
+    def on_script_section_end(self, section_id: str, context: Dict[str, Any]) -> None:
+        """在脚本段结束时调用。"""
         pass
 
     @abstractmethod
-    def on_choice_selected(self, choice_index: int, context: Dict[str, Any]) -> None:
-        """当选择一个选项时调用。"""
+    def on_parameter_input(self, param_name: str, param_value: Any, context: Dict[str, Any]) -> None:
+        """当输入参数时调用。"""
         pass
 
     @abstractmethod
-    def on_game_start(self, context: Dict[str, Any]) -> None:
-        """在游戏开始时调用。"""
+    def on_execution_start(self, context: Dict[str, Any]) -> None:
+        """在脚本执行开始时调用。"""
         pass
 
     @abstractmethod
-    def on_game_end(self, context: Dict[str, Any]) -> None:
-        """在游戏结束时调用。"""
+    def on_execution_end(self, context: Dict[str, Any]) -> None:
+        """在脚本执行结束时调用。"""
         pass
 
 

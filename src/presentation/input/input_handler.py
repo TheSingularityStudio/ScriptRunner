@@ -1,439 +1,149 @@
 """
 ScriptRunner 的输入处理器。
-处理玩家的自然语言输入。
+处理脚本参数输入。
 """
 
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional
 from ...domain.runtime.interfaces import IInputHandler
 from ...infrastructure.logger import get_logger
 from ...infrastructure.config import Config
 from ...infrastructure.container import Container
-from ...infrastructure.plugin_manager import PluginManager
-from ...infrastructure.plugin_interface import ActionPlugin
-from ...utils.exceptions import ExecutionError, GameError
+from ...utils.exceptions import ExecutionError
 
 logger = get_logger(__name__)
 
 
 class InputHandler(IInputHandler):
-    """处理玩家的自然语言输入。"""
+    """处理脚本参数输入。"""
 
     def __init__(self, container: Container, config: Config):
         self.container = container
         self.config = config
 
-        # 懒加载依赖
-        self._parser = None
-        self._state_manager = None
-        self._command_executor = None
-        self._event_manager = None
-        self._condition_evaluator = None
-        self._interaction_manager = None
-        self._action_executor = None
+    def get_parameter_input(self, param_name: str, param_type: str = 'str', default_value: Any = None) -> Any:
+        """
+        获取参数输入。
 
-        # 获取插件管理器（已由ApplicationInitializer加载）
-        self.plugin_manager = self.container.get('plugin_manager')
+        Args:
+            param_name: 参数名称
+            param_type: 参数类型 ('str', 'int', 'float', 'bool')
+            default_value: 默认值
 
-        # 从插件加载动作处理器
-        self.action_handlers: Dict[str, Callable[[str], Dict[str, Any]]] = {}
-        self._load_actions_from_plugins()
+        Returns:
+            参数值
 
-        # 从脚本加载组合配方（将在第一次访问parser时设置）
-        self._combine_recipes = None
+        Raises:
+            ExecutionError: 当输入无效时抛出
+        """
+        logger.debug(f"Getting parameter input: {param_name} ({param_type})")
 
-        # 缓存常用数据
-        self._scene_cache: Dict[str, Any] = {}
-        self._object_cache: Dict[str, Any] = {}
+        while True:
+            try:
+                prompt = f"请输入 {param_name}"
+                if default_value is not None:
+                    prompt += f" (默认: {default_value})"
+                prompt += ": "
 
-    @property
-    def combine_recipes(self):
-        """获取组合配方。"""
-        if self._combine_recipes is None:
-            self._combine_recipes = self.config.get('game.combine_recipes', {})
-        return self._combine_recipes
+                user_input = input(prompt).strip()
 
-    def _load_actions_from_plugins(self):
-        """从插件加载动作处理器。"""
-        action_plugins = self.plugin_manager.get_plugins_by_type(ActionPlugin)
-        for plugin in action_plugins:
-            actions = plugin.get_actions()
-            for action_name, action_func in actions.items():
-                # 创建包装函数，为动作函数提供上下文
-                def create_wrapped_handler(action_func, action_name):
-                    def wrapped_handler(target: str) -> Dict[str, Any]:
-                        context = self._get_action_context()
-                        return action_func(target, context)
-                    return wrapped_handler
-                
-                self.action_handlers[action_name] = create_wrapped_handler(action_func, action_name)
-                logger.info(f"Loaded action '{action_name}' from plugin '{plugin.name}'")
+                # 如果输入为空且有默认值，使用默认值
+                if not user_input and default_value is not None:
+                    logger.debug(f"Using default value for {param_name}: {default_value}")
+                    return default_value
 
-    def _get_action_context(self) -> Dict[str, Any]:
-        """获取动作执行上下文。"""
-        state = self.state
-        if not hasattr(state, 'get_variable'):
-            logger.error(f"State manager is not properly initialized: {type(state)}")
-            raise ExecutionError("State manager is not properly initialized")
-        return {
-            'parser': self.parser,
-            'state': state,
-            'config': self.config,
-            'condition_evaluator': self.condition_evaluator,
-            'interaction_manager': self.interaction_manager,
-            'action_executor': self.action_executor,
-            'input_handler': self,
-            'is_object_accessible': self._is_object_accessible,
-        }
+                # 如果输入为空且无默认值，继续循环
+                if not user_input:
+                    continue
 
-    @property
-    def parser(self):
-        if self._parser is None:
-            self._parser = self.container.get('parser')
-        return self._parser
+                # 根据类型转换输入
+                if param_type == 'int':
+                    return int(user_input)
+                elif param_type == 'float':
+                    return float(user_input)
+                elif param_type == 'bool':
+                    return user_input.lower() in ('true', '1', 'yes', 'y')
+                else:
+                    return user_input
 
-    @property
-    def state(self):
-        if self._state_manager is None:
-            self._state_manager = self.container.get('state_manager')
-        return self._state_manager
+            except ValueError:
+                logger.warning(f"Invalid input type for {param_name}, expected {param_type}")
+                print(f"请输入有效的 {param_type} 类型值。")
+            except KeyboardInterrupt:
+                logger.info("Input interrupted by user")
+                raise ExecutionError("用户中断输入")
+            except Exception as e:
+                logger.error(f"Unexpected error during parameter input: {e}")
+                print(f"输入时发生意外错误: {e}")
+                print("请重试。")
 
-    @property
-    def command_executor(self):
-        if self._command_executor is None:
-            self._command_executor = self.container.get('command_executor')
-        return self._command_executor
+    def get_multiple_parameters(self, params: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        获取多个参数输入。
 
-    @property
-    def event_manager(self):
-        if self._event_manager is None and self.container.has('event_manager'):
-            self._event_manager = self.container.get('event_manager')
-        return self._event_manager
+        Args:
+            params: 参数配置字典，格式为 {param_name: {'type': str, 'default': value, 'description': str}}
 
-    @event_manager.setter
-    def event_manager(self, value):
-        self._event_manager = value
+        Returns:
+            参数值字典
+        """
+        logger.debug(f"Getting multiple parameters: {list(params.keys())}")
+        result = {}
 
-    @property
-    def condition_evaluator(self):
-        if self._condition_evaluator is None and self.container.has('condition_evaluator'):
-            self._condition_evaluator = self.container.get('condition_evaluator')
-        return self._condition_evaluator
+        for param_name, config in params.items():
+            param_type = config.get('type', 'str')
+            default_value = config.get('default')
+            description = config.get('description', '')
 
-    @condition_evaluator.setter
-    def condition_evaluator(self, value):
-        self._condition_evaluator = value
+            if description:
+                print(f"\n{description}")
 
-    @property
-    def interaction_manager(self):
-        if self._interaction_manager is None and self.container.has('interaction_manager'):
-            self._interaction_manager = self.container.get('interaction_manager')
-        return self._interaction_manager
+            value = self.get_parameter_input(param_name, param_type, default_value)
+            result[param_name] = value
 
-    @interaction_manager.setter
-    def interaction_manager(self, value):
-        self._interaction_manager = value
+        return result
 
-    @property
-    def action_executor(self):
-        if self._action_executor is None and self.container.has('action_executor'):
-            self._action_executor = self.container.get('action_executor')
-        return self._action_executor
+    def confirm_action(self, message: str) -> bool:
+        """
+        确认操作。
+
+        Args:
+            message: 确认消息
+
+        Returns:
+            是否确认
+        """
+        logger.debug(f"Confirming action: {message}")
+
+        while True:
+            try:
+                user_input = input(f"{message} (y/n): ").strip().lower()
+                if user_input in ('y', 'yes', 'true', '1'):
+                    return True
+                elif user_input in ('n', 'no', 'false', '0'):
+                    return False
+                else:
+                    print("请输入 y 或 n。")
+            except KeyboardInterrupt:
+                logger.info("Confirmation interrupted by user")
+                return False
+            except Exception as e:
+                logger.error(f"Unexpected error during confirmation: {e}")
+                print(f"确认时发生意外错误: {e}")
+                print("请重试。")
 
     def process_player_input(self, input_text: str) -> Dict[str, Any]:
         """
-        处理玩家的自然语言输入并返回结果。
+        处理输入（为了兼容接口，实际不处理自然语言输入）。
 
         Args:
-            input_text: 玩家的输入文本
+            input_text: 输入文本
 
         Returns:
-            包含处理结果的字典，包含success, message, action等键
-
-        Raises:
-            GameError: 当输入处理失败时抛出
+            处理结果字典
         """
-        logger.debug(f"Processing player input: {input_text}")
-        start_time = logger.isEnabledFor(10)  # DEBUG level
-
-        try:
-            # 解析输入
-            parsed_command = self.parser.parse_player_command(input_text)
-            action = parsed_command.get('action', 'unknown')
-            target = parsed_command.get('target')
-
-            logger.debug(f"Parsed action: {action}, target: {target}")
-
-            # 验证动作
-            if action == 'unknown':
-                message = self.config.get('messages.unknown_action', f"我不理解 '{input_text}'。")
-                return {
-                    'success': False,
-                    'message': message,
-                    'action': action
-                }
-
-            # 解析代词
-            target = self._resolve_pronoun(target)
-
-            # 执行动作
-            result = self._execute_action(action, target)
-
-            # 如果动作执行成功且有目标，更新last_object
-            if result['success'] and target:
-                self.state.set_variable('last_object', target)
-
-            # 如果动作执行成功，触发事件
-            if result['success'] and self.event_manager:
-                try:
-                    self.event_manager.trigger_player_action(action, target=target)
-                    logger.debug(f"Triggered event for action: {action}")
-                except Exception as e:
-                    logger.warning(f"Failed to trigger event for action {action}: {e}")
-
-            if start_time:
-                logger.debug(f"Input processing completed in {logger.isEnabledFor(10)}ms")
-
-            return {
-                'success': result['success'],
-                'action': action,
-                'target': target,
-                'message': result['message'],
-                'original_input': input_text
-            }
-
-        except ExecutionError as e:
-            logger.error(f"Execution error for input '{input_text}': {e}")
-            return {
-                'success': False,
-                'action': action if 'action' in locals() else 'unknown',
-                'target': target if 'target' in locals() else None,
-                'message': str(e),
-                'original_input': input_text
-            }
-        except Exception as e:
-            logger.error(f"Unexpected error processing input '{input_text}': {e}")
-            return {
-                'success': False,
-                'action': action if 'action' in locals() else 'unknown',
-                'target': target if 'target' in locals() else None,
-                'message': f"处理输入时发生意外错误: {e}",
-                'original_input': input_text
-            }
-
-    def _execute_action(self, action: str, target: str) -> Dict[str, Any]:
-        """
-        执行特定动作。
-
-        Args:
-            action: 动作名称
-            target: 目标对象
-
-        Returns:
-            执行结果字典
-
-        Raises:
-            ExecutionError: 当动作执行失败时抛出
-        """
-        logger.debug(f"Executing action: {action} with target: {target}")
-
-        # 首先检查是否是玩家命令映射到脚本命令
-        player_command = self.parser.get_player_command(action)
-        if player_command:
-            script_command_name = player_command.get('script_command')
-            if script_command_name:
-                return self._execute_script_command(script_command_name, player_command, target)
-
-        # 使用可扩展的动作处理器
-        handler = self.action_handlers.get(action)
-        if not handler:
-            raise ExecutionError(f"未知动作: {action}")
-
-        try:
-            result = handler(target)
-            logger.debug(f"Action {action} executed with result: success={result['success']}")
-
-            # 如果有action_executor且有actions，执行它们
-            if self.action_executor and result.get('actions'):
-                try:
-                    self.action_executor.execute_actions(result['actions'])
-                    logger.debug(f"Executed {len(result['actions'])} additional actions for {action}")
-                except Exception as e:
-                    logger.error(f"Error executing additional actions for {action}: {e}")
-                    raise ExecutionError(f"执行动作 '{action}' 的附加操作时出错") from e
-
-            return result
-
-        except ExecutionError:
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error in action {action}: {e}")
-            raise ExecutionError(f"执行动作 '{action}' 时发生意外错误") from e
-
-    def register_action(self, action_name: str, handler: Callable[[str], Dict[str, Any]]):
-        """
-        注册新的动作处理器。
-
-        Args:
-            action_name: 动作名称
-            handler: 动作处理函数
-        """
-        self.action_handlers[action_name] = handler
-        logger.info(f"Registered new action handler: {action_name}")
-
-    def validate_target(self, target: str, require_accessible: bool = True) -> Optional[Dict[str, Any]]:
-        """
-        验证目标对象是否存在且可访问。
-
-        Args:
-            target: 目标对象ID
-            require_accessible: 是否要求对象可访问
-
-        Returns:
-            对象数据字典，如果无效则返回None
-
-        Raises:
-            ExecutionError: 当目标无效时抛出
-        """
-        if not target:
-            raise ExecutionError("需要指定目标对象")
-
-        obj = self._get_cached_object(target)
-        if not obj:
-            raise ExecutionError(f"这里没有 {target}")
-
-        if require_accessible and not self._is_object_accessible(target):
-            raise ExecutionError(f"无法访问 {target}")
-
-        return obj
-
-    def _get_cached_object(self, obj_id: str) -> Optional[Dict[str, Any]]:
-        """获取缓存的对象数据。"""
-        if obj_id not in self._object_cache:
-            self._object_cache[obj_id] = self.parser.get_object(obj_id)
-        return self._object_cache[obj_id]
-
-    def _get_cached_scene(self, scene_id: str) -> Optional[Dict[str, Any]]:
-        """获取缓存的场景数据。"""
-        if scene_id not in self._scene_cache:
-            self._scene_cache[scene_id] = self.parser.get_scene(scene_id)
-        return self._scene_cache[scene_id]
-
-    def _is_object_accessible(self, obj_id: str) -> bool:
-        """
-        检查对象是否在当前场景中可访问。
-
-        Args:
-            obj_id: 对象ID
-
-        Returns:
-            是否可访问
-        """
-        current_scene_id = self.state.get_current_scene()
-        if not current_scene_id:
-            return False
-
-        scene = self._get_cached_scene(current_scene_id)
-        if not scene:
-            return False
-
-        # 检查场景中的对象列表
-        objects_in_scene = scene.get('objects', [])
-        for obj_ref in objects_in_scene:
-            if isinstance(obj_ref, dict) and obj_ref.get('ref') == obj_id:
-                return True
-            elif isinstance(obj_ref, str) and obj_ref == obj_id:
-                return True
-
-        return False
-
-    def _execute_script_command(self, script_command_name: str, player_command: Dict[str, Any], target: str) -> Dict[str, Any]:
-        """
-        执行脚本命令。
-
-        Args:
-            script_command_name: 脚本命令名称
-            player_command: 玩家命令配置
-            target: 目标对象
-
-        Returns:
-            执行结果字典
-        """
-        logger.debug(f"Executing script command: {script_command_name} with player_command: {player_command}")
-
-        # 获取脚本命令定义
-        script_command = self.parser.get_command(script_command_name)
-        if not script_command:
-            raise ExecutionError(f"未知脚本命令: {script_command_name}")
-
-        # 获取玩家命令的参数
-        parameters = player_command.get('parameters', {})
-        target_required = player_command.get('target_required', False)
-
-        # 验证目标要求
-        if target_required and not target:
-            raise ExecutionError("此命令需要指定目标")
-
-        # 构建命令值，替换参数中的占位符
-        command_value = parameters.get('message', '')
-        if '{target}' in command_value:
-            command_value = command_value.replace('{target}', target or '')
-        if '{target_description}' in command_value:
-            obj = self.parser.get_object(target) if target else None
-            description = obj.get('description', f'一个{target}') if obj else '这里什么都没有'
-            command_value = command_value.replace('{target_description}', description)
-        if '{inventory_list}' in command_value:
-            inventory = self.state.get_variable('inventory', [])
-            if inventory:
-                items_str = ', '.join(inventory)
-                command_value = command_value.replace('{inventory_list}', items_str)
-            else:
-                command_value = command_value.replace('{inventory_list}', '空')
-
-        # 构建命令字典
-        command = {script_command_name: command_value}
-
-        # 执行命令
-        try:
-            messages = self.command_executor.execute_command(command)
-            message = '\n'.join(messages) if messages else '命令执行完成'
-            return {'success': True, 'message': message, 'actions': []}
-        except Exception as e:
-            logger.error(f"Error executing script command {script_command_name}: {e}")
-            raise ExecutionError(f"执行脚本命令 '{script_command_name}' 时出错") from e
-
-    def _resolve_pronoun(self, target: str) -> str:
-        """
-        解析代词，返回实际的对象ID。
-
-        Args:
-            target: 可能包含代词的目标字符串
-
-        Returns:
-            解析后的目标字符串
-        """
-        if not target:
-            return target
-
-        # 检查是否是代词
-        if target == 'last_object':
-            resolved = self.state.get_variable('last_object')
-            if resolved:
-                return resolved
-            else:
-                raise ExecutionError("没有可用的上一个对象")
-
-        # 可以扩展其他代词解析逻辑
-        return target
-
-    def _remove_object_from_scene(self, obj_id: str):
-        """从当前场景中移除对象。"""
-        current_scene_id = self.state.get_current_scene()
-        if not current_scene_id:
-            return
-
-        # 注意：这里我们不能直接修改parser的数据，因为它是不可变的
-        # 相反，我们应该在状态管理器中记录移除的对象
-        removed_objects = self.state.get_variable('removed_objects', [])
-        if obj_id not in removed_objects:
-            removed_objects.append(obj_id)
-            self.state.set_variable('removed_objects', removed_objects)
+        logger.warning("process_player_input called on generic InputHandler - this should be handled by game plugin")
+        return {
+            'success': False,
+            'message': '此输入处理器不支持自然语言输入，请使用参数输入方法。',
+            'action': 'unsupported'
+        }

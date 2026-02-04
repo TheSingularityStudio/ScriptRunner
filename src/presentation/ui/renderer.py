@@ -1,6 +1,5 @@
 import os
-import time
-from typing import Dict, Any, List
+from typing import Dict, Any
 from .ui_interface import UIBackend
 from ...infrastructure.logger import get_logger
 
@@ -10,109 +9,55 @@ class ConsoleRenderer(UIBackend):
     def __init__(self, execution_engine):
         self.engine = execution_engine
 
-    def render_scene(self, scene_data: Dict[str, Any]):
-        """渲染场景到控制台，支持DSL动态内容。"""
+    def render_output(self, output_data: Dict[str, Any]):
+        """渲染通用脚本输出到控制台。"""
         self.clear_screen()
         print("\n" + "="*50)
-        print(scene_data['text'])
+        text = output_data.get('text', '')
+        print(text)
         print("="*50)
 
-        # 显示DSL对象信息
-        objects = scene_data.get('objects', [])
-        if objects:
-            print("\n你可以看到:")
-            for obj in objects:
-                obj_def = self.engine.parser.get_object(obj.get('ref', ''))
-                if obj_def:
-                    name = obj_def.get('name', obj['ref'])
-                    # 检查是否是生物并显示生命值
-                    if obj_def.get('type') == 'creature':
-                        states = obj_def.get('states', [])
-                        health_state = next((s for s in states if s.get('name') == 'health'), None)
-                        if health_state:
-                            health = health_state.get('value', 0)
-                            if health > 0:
-                                print(f"- {name} (生命值: {health})")
-                            else:
-                                print(f"- {name} (已死亡)")
-                        else:
-                            print(f"- {name}")
-                    else:
-                        print(f"- {name}")
+        # 显示附加信息
+        additional_info = output_data.get('additional_info', {})
+        if additional_info:
+            print("\n附加信息:")
+            for key, value in additional_info.items():
+                print(f"- {key}: {value}")
 
-        choices = scene_data.get('choices', [])
-        if choices:
-            print("\n选择:")
-            for i, choice in enumerate(choices):
-                print(f"{i+1}. {choice['text']}")
-        else:
-            print("\n[游戏结束]")
-
-        # 显示状态信息
-        self._render_status()
-
-    def _render_status(self):
-        """渲染玩家状态。"""
-        health = self.engine.state.get_variable('health', 100)
-        print(f"\n状态: 生命值 {health}")
-
-        active_effects = self.engine.state.get_active_effects()
-        if active_effects:
-            print("效果:", ', '.join(active_effects.keys()))
-
-    def get_player_choice(self) -> int:
-        """获取玩家的选择输入，支持自然语言。"""
-        logger.debug("Waiting for player input")
+    def get_parameter_input(self, param_name: str, param_type: str = 'str') -> Any:
+        """获取参数输入。"""
+        logger.debug(f"Waiting for parameter input: {param_name}")
         while True:
             try:
-                user_input = input("\n请选择 (输入数字) 或输入命令: ").strip()
+                user_input = input(f"\n请输入 {param_name}: ").strip()
                 if not user_input:
                     logger.debug("No input provided")
-                    return -1  # No choice made
+                    return None
 
-                # 检查是否是数字选择
-                if user_input.isdigit():
-                    choice = int(user_input) - 1  # Convert to 0-based index
-                    logger.debug(f"Player selected choice: {choice}")
-                    return choice
-
-                # 处理自然语言输入
-                result = self.engine.process_player_input(user_input)
-                if result['success']:
-                    self.show_message(result['message'])
-                    # 检查是否需要重新渲染场景（例如搜索后发现新物品）
-                    current_scene = self.engine.state.get_current_scene()
-                    scene_data = self.engine.execute_scene(current_scene)
-                    self.render_scene(scene_data)
+                # 根据类型转换输入
+                if param_type == 'int':
+                    return int(user_input)
+                elif param_type == 'float':
+                    return float(user_input)
                 else:
-                    print(f"\n{result['message']}")
-                logger.debug(f"Processed natural language input: {user_input}")
-                return -1  # Continue current scene
+                    return user_input
 
             except ValueError:
-                logger.warning("Invalid input format")
-                print("请输入有效的数字或命令。")
+                logger.warning(f"Invalid input type for {param_name}, expected {param_type}")
+                print(f"请输入有效的 {param_type} 类型值。")
             except KeyboardInterrupt:
                 logger.info("Input interrupted by user")
-                raise  # Re-raise to be caught in execution loop
+                raise
             except Exception as e:
                 logger.error(f"Unexpected error during input: {e}")
                 print(f"输入时发生意外错误: {e}")
                 print("请重试。")
 
     def show_message(self, message: str):
-        """向玩家显示消息。"""
+        """显示消息。"""
         print(f"\n{message}")
-        input("按回车键继续...")  # 等待用户按回车
+        input("按回车键继续...")
 
     def clear_screen(self):
         """清除控制台屏幕。"""
         os.system('cls' if os.name == 'nt' else 'clear')
-
-    def render_status(self, status_data: Dict[str, Any]):
-        """渲染玩家状态信息。"""
-        print("\n" + "-"*30)
-        print("玩家状态:")
-        for key, value in status_data.items():
-            print(f"  {key}: {value}")
-        print("-"*30)

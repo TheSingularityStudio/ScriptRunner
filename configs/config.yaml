@@ -6,24 +6,21 @@ logging:
   level: INFO  # 日志级别: DEBUG, INFO, WARNING, ERROR, CRITICAL
   file: logs/%Y-%m-%d.log  # 日志文件路径，支持时间格式化
 
-# 游戏配置
-game:
-  save_file: game_save.json  # 游戏存档文件路径
+# 脚本执行配置
+script:
+  save_file: execution_save.json  # 执行状态保存文件路径
   auto_save: true  # 是否启用自动保存
-  default_creature_health: 30  # 默认生物生命值
-  base_damage: 5  # 基础伤害
-  strength_damage_multiplier: 0.5  # 力量伤害倍数
-
+  max_execution_time: 300  # 最大执行时间（秒）
+  enable_parameter_validation: true  # 是否启用参数验证
 
 # 消息配置
 messages:
-  unknown_action: "我不理解这个命令。"
-  take_success: "你拿起了 {target}。"
-  defeat_success: "你击败了 {target}！"
-  attack_success: "你攻击了 {target}，造成了 {damage} 点伤害，它还剩下 {health} 点生命。"
-  combine_success: "你成功组合出了 {result}！"
-  inventory_empty: "你的背包是空的。"
-  inventory_header: "你的背包中有："
+  unknown_command: "未知命令。"
+  execution_success: "脚本执行完成。"
+  execution_error: "脚本执行出错: {error}"
+  parameter_required: "参数 '{param}' 是必需的。"
+  parameter_invalid: "参数 '{param}' 的值无效: {value}"
+  input_prompt: "请输入 {param}: "
 
 # 用户界面配置
 ui:

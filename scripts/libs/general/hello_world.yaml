@@ -1,0 +1,16 @@
+name: "Hello World Example"
+description: "一个简单的问候脚本示例"
+version: "1.0.0"
+
+parameters:
+  - name: user_name
+    type: str
+    description: "请输入您的名字"
+    default: "World"
+
+script:
+  - print:
+      message: "Hello, {user_name}!"
+
+  - print:
+      message: "欢迎使用 ScriptRunner！"
