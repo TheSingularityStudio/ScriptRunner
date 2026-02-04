@@ -22,23 +22,69 @@ class CoreCommandExecutor(ICommandExecutor):
             self.execute_command(command)
 
     def execute_command(self, command: Dict[str, Any]) -> None:
-        """执行单个命令。"""
+        """执行单个命令，使用新的统一YAML结构。"""
         if not command:
             return
 
         command_type = list(command.keys())[0]
-        command_value = command[command_type]
+        command_params = command[command_type]
 
-        logger.debug(f"Executing core command: {command_type} = {command_value}")
+        logger.debug(f"Executing core command: {command_type} with params: {command_params}")
 
         try:
-            if command_type == 'set':
-                self._execute_set_command(command_value)
+            if command_type == 'print':
+                self._execute_print_command(command_params)
+            elif command_type == 'set_variable':
+                self._execute_set_variable_command(command_params)
+            elif command_type == 'call_action':
+                self._execute_call_action_command(command_params)
+            elif command_type == 'condition':
+                self._execute_condition_command(command_params)
             else:
                 logger.warning(f"Unknown core command type: {command_type}")
         except Exception as e:
             logger.error(f"Error executing core command {command}: {e}")
             raise
+
+    def _execute_print_command(self, params: Dict[str, Any]) -> None:
+        """执行 print 命令。"""
+        message = params.get('message', '')
+        # 这里可以扩展为实际的输出处理
+        logger.info(f"Script output: {message}")
+
+    def _execute_set_variable_command(self, params: Dict[str, Any]) -> None:
+        """执行 set_variable 命令。"""
+        name = params.get('name')
+        value = params.get('value')
+        if name is None:
+            logger.error("set_variable command missing 'name' parameter")
+            return
+        self.state.set_variable(name, value)
+
+    def _execute_call_action_command(self, params: Dict[str, Any]) -> None:
+        """执行 call_action 命令。"""
+        action = params.get('action')
+        if action is None:
+            logger.error("call_action command missing 'action' parameter")
+            return
+        # 这里需要通过脚本对象调用动作，暂时记录
+        logger.debug(f"Call action: {action}")
+
+    def _execute_condition_command(self, params: Dict[str, Any]) -> None:
+        """执行 condition 命令。"""
+        expression = params.get('expression')
+        then_commands = params.get('then', [])
+        else_commands = params.get('else', [])
+
+        # 这里需要评估表达式，暂时假设为真
+        condition_result = True  # 占位符
+
+        if condition_result:
+            for cmd in then_commands:
+                self.execute_command(cmd)
+        else:
+            for cmd in else_commands:
+                self.execute_command(cmd)
 
     def _execute_set_command(self, command_value: str):
         """执行 set 命令，如 'health = 100' 或 'health += 25'。"""

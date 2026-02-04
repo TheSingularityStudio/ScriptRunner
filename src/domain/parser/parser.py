@@ -72,7 +72,7 @@ class ScriptParser(IScriptParser):
             # If key exists and both are not dicts, keep target (no overwrite)
 
     def _validate_script(self):
-        """脚本结构的初步验证。"""
+        """脚本结构的初步验证，包括新语法支持。"""
         # Basic validation for script object structure
         if not isinstance(self.script_data, dict):
             raise ValueError("Script must be a dictionary")
@@ -103,19 +103,38 @@ class ScriptParser(IScriptParser):
             if start_action not in actions:
                 raise ValueError(f"start_action '{start_action}' not found in actions")
 
-        # Validate each action has commands
+        # Validate each action has commands and commands are uniform
         for action_name, action_data in actions.items():
             if not isinstance(action_data, dict) or 'commands' not in action_data:
                 raise ValueError(f"Action '{action_name}' must be a dict with 'commands' key")
             if not isinstance(action_data['commands'], list):
                 raise ValueError(f"Action '{action_name}' commands must be a list")
+            # Validate uniform command structure
+            for cmd in action_data['commands']:
+                if not isinstance(cmd, dict) or len(cmd) != 1:
+                    raise ValueError(f"Command in action '{action_name}' must be a dict with exactly one key (e.g., print: {{...}})")
 
-        # Optional keys validation
-        if 'variables' in self.script_data and not isinstance(self.script_data['variables'], dict):
-            raise ValueError("Variables must be a dictionary")
+        # Validate variables with type hints
+        if 'variables' in self.script_data:
+            variables = self.script_data['variables']
+            if not isinstance(variables, dict):
+                raise ValueError("Variables must be a dictionary")
+            for var_name, var_def in variables.items():
+                if not isinstance(var_def, dict) or 'value' not in var_def or 'type' not in var_def:
+                    raise ValueError(f"Variable '{var_name}' must be a dict with 'value' and 'type' keys")
+                if var_def['type'] not in ['int', 'float', 'str', 'bool', 'array', 'object']:
+                    raise ValueError(f"Variable '{var_name}' type must be one of: int, float, str, bool, array, object")
 
+        # Validate events (basic for now, parameterized events to be added later)
         if 'events' in self.script_data and not isinstance(self.script_data['events'], dict):
             raise ValueError("Events must be a dictionary")
+
+        # Validate includes (basic for now, namespaced includes to be added later)
+        if 'includes' in self.script_data and not isinstance(self.script_data['includes'], (list, dict)):
+            raise ValueError("Includes must be a list or dict")
+
+        # Semantic validation: check for undefined variables in expressions (basic)
+        self._validate_expressions()
 
         logger.info("Script validation passed")
 

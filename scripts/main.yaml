@@ -1,39 +1,28 @@
-name: "ScriptRunner 示例脚本"
+name: "ScriptRunner 示例脚本 v2"
 
 variables:
-  health: 100
-  score: 0
-  player_name: "冒险者"
+  health: {value: 100, type: int}
+  score: {value: 0, type: int}
+  player_name: {value: "冒险者", type: str}
 
 actions:
   greet:
     commands:
-      - type: print
-        message: "欢迎来到 ScriptRunner，${player_name}！"
-      - type: set_variable
-        name: greeting_done
-        value: true
+      - print: {message: "欢迎来到 ScriptRunner，{{player_name}}！"}
+      - set_variable: {name: greeting_done, value: true}
 
   show_status:
     commands:
-      - type: print
-        message: "生命值：${health}"
-      - type: print
-        message: "分数：${score}"
+      - print: {message: "生命值：{{health}}"}
+      - print: {message: "分数：{{score}}"}
 
   initialize:
     commands:
-      - type: print
-        message: "正在初始化游戏..."
-      - type: set_variable
-        name: game_started
-        value: true
+      - print: {message: "正在初始化游戏..."}
+      - set_variable: {name: game_started, value: true}
 
 events:
   on_start:
-    - type: call_action
-      action: initialize
-    - type: call_action
-      action: greet
-    - type: call_action
-      action: show_status
+    - call_action: {action: initialize}
+    - call_action: {action: greet}
+    - call_action: {action: show_status}
