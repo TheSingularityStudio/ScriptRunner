@@ -135,12 +135,10 @@ class ApplicationInitializer:
         """创建执行引擎的工厂函数。"""
         parser = self.container.get('parser')
         state_manager = self.container.get('state_manager')
-        scene_executor = self.container.get('scene_executor')
         command_executor = self.container.get('command_executor')
         condition_evaluator = self.container.get('condition_evaluator')
-        choice_processor = self.container.get('choice_processor')
         input_handler = self.container.get('input_handler')
-        execution_engine = ExecutionEngine(parser, state_manager, scene_executor, command_executor, condition_evaluator, choice_processor, input_handler)
+        execution_engine = ExecutionEngine(parser, state_manager, command_executor, condition_evaluator, input_handler)
 
         # 设置输入处理器的引用
         input_handler.condition_evaluator = execution_engine.condition_evaluator

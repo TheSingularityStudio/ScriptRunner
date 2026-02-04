@@ -52,7 +52,11 @@ class ExecutionEngine(IExecutionEngine):
                     logger.warning(f"Plugin execution failed, falling back to direct execution: {e}")
 
         # 回退到直接执行
-        return self.script_section_executor.execute_script_section(section_id)
+        if self.script_section_executor:
+            return self.script_section_executor.execute_script_section(section_id)
+        else:
+            logger.warning(f"No scene executor available, cannot execute section: {section_id}")
+            return {}
 
     def process_option(self, option_index: int) -> tuple[Optional[str], List[str]]:
         """处理选项并返回下一个脚本段和消息。"""

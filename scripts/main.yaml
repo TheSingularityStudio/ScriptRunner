@@ -1,24 +1,39 @@
-# 示例通用脚本：简单的计算和输出脚本
-name: "示例计算脚本"
-description: "演示ScriptRunner执行基本计算和输出操作"
+name: "ScriptRunner 示例脚本"
 
 variables:
-  result: 0
+  health: 100
+  score: 0
+  player_name: "冒险者"
 
 actions:
-  - name: calculate
+  greet:
     commands:
+      - type: print
+        message: "欢迎来到 ScriptRunner，${player_name}！"
       - type: set_variable
-        name: result
-        value: 42
-      - type: print
-        message: "计算结果: {result}"
+        name: greeting_done
+        value: true
 
-  - name: display_info
+  show_status:
     commands:
       - type: print
-        message: "脚本名称: {name}"
+        message: "生命值：${health}"
       - type: print
-        message: "描述: {description}"
+        message: "分数：${score}"
 
-start_action: calculate
+  initialize:
+    commands:
+      - type: print
+        message: "正在初始化游戏..."
+      - type: set_variable
+        name: game_started
+        value: true
+
+events:
+  on_start:
+    - type: call_action
+      action: initialize
+    - type: call_action
+      action: greet
+    - type: call_action
+      action: show_status

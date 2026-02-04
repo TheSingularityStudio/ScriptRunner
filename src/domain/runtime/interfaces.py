@@ -117,12 +117,3 @@ class IScriptObject(ABC):
     def trigger_event(self, event_name: str, **kwargs) -> Any:
         """触发脚本事件。"""
         pass
-
-
-class ISceneExecutor(ABC):
-    """场景执行器接口。"""
-
-    @abstractmethod
-    def execute_scene(self, scene_id: str) -> Dict[str, Any]:
-        """执行场景并返回结果。"""
-        pass

@@ -78,19 +78,30 @@ class ScriptParser(IScriptParser):
             raise ValueError("Script must be a dictionary")
 
         # Required keys for all scripts
-        required_keys = {'name', 'actions', 'start_action'}
+        required_keys = {'name', 'actions'}
         for key in required_keys:
             if key not in self.script_data:
                 raise ValueError(f"Script must contain '{key}' key")
+
+        # Must have either start_action or events.on_start
+        has_start_action = 'start_action' in self.script_data
+        has_events_on_start = ('events' in self.script_data and
+                              isinstance(self.script_data['events'], dict) and
+                              'on_start' in self.script_data['events'])
+
+        if not (has_start_action or has_events_on_start):
+            raise ValueError("Script must contain either 'start_action' or 'events.on_start'")
 
         # Validate actions structure
         actions = self.script_data.get('actions', {})
         if not isinstance(actions, dict):
             raise ValueError("Actions must be a dictionary")
 
-        start_action = self.script_data.get('start_action')
-        if start_action not in actions:
-            raise ValueError(f"start_action '{start_action}' not found in actions")
+        # If start_action is specified, validate it exists
+        if has_start_action:
+            start_action = self.script_data.get('start_action')
+            if start_action not in actions:
+                raise ValueError(f"start_action '{start_action}' not found in actions")
 
         # Validate each action has commands
         for action_name, action_data in actions.items():
@@ -102,6 +113,9 @@ class ScriptParser(IScriptParser):
         # Optional keys validation
         if 'variables' in self.script_data and not isinstance(self.script_data['variables'], dict):
             raise ValueError("Variables must be a dictionary")
+
+        if 'events' in self.script_data and not isinstance(self.script_data['events'], dict):
+            raise ValueError("Events must be a dictionary")
 
         logger.info("Script validation passed")
 

@@ -24,9 +24,12 @@ class TestScriptParser:
     def test_load_script_with_variables_actions_events(self):
         """测试加载包含variables、actions、events的脚本。"""
         script_content = {
+            'name': 'Test Script with Variables and Events',
             'variables': {'health': 100, 'score': 0},
             'actions': {
-                'greet': [{'type': 'print', 'message': 'Hello!'}]
+                'greet': {
+                    'commands': [{'type': 'print', 'message': 'Hello!'}]
+                }
             },
             'events': {
                 'on_start': [{'type': 'call_action', 'action': 'greet'}]
@@ -48,7 +51,15 @@ class TestScriptParser:
     def test_load_script_without_expected_keys(self):
         """测试加载不包含预期键的脚本（应发出警告但不失败）。"""
         script_content = {
-            'some_other_key': 'value'
+            'name': 'Minimal Script',
+            'actions': {
+                'do_nothing': {
+                    'commands': [{'type': 'print', 'message': 'Nothing'}]
+                }
+            },
+            'events': {
+                'on_start': [{'type': 'call_action', 'action': 'do_nothing'}]
+            }
         }
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
@@ -81,9 +92,12 @@ class TestScriptParser:
     def test_create_script_object(self):
         """测试创建脚本对象。"""
         script_data = {
+            'name': 'Test Object Creation',
             'variables': {'counter': 0},
             'actions': {
-                'increment': [{'type': 'set_variable', 'name': 'counter', 'value': 1}]
+                'increment': {
+                    'commands': [{'type': 'set_variable', 'name': 'counter', 'value': 1}]
+                }
             },
             'events': {}
         }

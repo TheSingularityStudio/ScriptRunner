@@ -115,17 +115,9 @@ class ScriptCompiler:
         max_consecutive_errors = 3  # 限制连续错误次数
 
         try:
-            # 检查是否需要使用游戏插件进行交互式执行
-            plugin_manager = self.container.get('plugin_manager')
-            game_plugin = plugin_manager.get_plugin('game_runner') if plugin_manager else None
-
-            if game_plugin and self._should_use_game_plugin():
-                # 使用游戏插件进行交互式执行
-                self._run_game_execution_loop(execution_engine, renderer, state_manager, start_action, game_plugin)
-            else:
-                # 使用标准动作执行
-                self._execute_action(start_action, execution_engine, renderer, state_manager)
-                self.logger.info(f"Executed action: {start_action}")
+            # 使用标准动作执行
+            self._execute_action(start_action, execution_engine, renderer, state_manager)
+            self.logger.info(f"Executed action: {start_action}")
 
         except KeyboardInterrupt:
             self.logger.info("Execution interrupted by user")
