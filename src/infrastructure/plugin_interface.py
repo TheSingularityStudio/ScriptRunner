@@ -1,5 +1,5 @@
 """
-ScriptRunner 的插件接口。
+Script Compiler 的插件接口。
 定义插件必须实现的接口。
 """
 
@@ -107,11 +107,11 @@ class StoragePlugin(PluginInterface):
     """用于自定义存储后端的插件。"""
 
     @abstractmethod
-    def save_game(self, game_data: Dict[str, Any]) -> bool:
-        """保存游戏数据。"""
+    def save_execution_state(self, execution_data: Dict[str, Any]) -> bool:
+        """保存执行状态数据。"""
         pass
 
     @abstractmethod
-    def load_game(self) -> Optional[Dict[str, Any]]:
-        """加载游戏数据。"""
+    def load_execution_state(self) -> Optional[Dict[str, Any]]:
+        """加载执行状态数据。"""
         pass

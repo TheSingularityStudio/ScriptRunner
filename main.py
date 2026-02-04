@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-文字游戏脚本运行器
-一个简单的基于文本的游戏引擎，用于运行YAML脚本定义的游戏，支持DSL语法。
+脚本编译器
+一个简单的基于文本的脚本执行引擎，用于编译和运行YAML脚本定义的脚本，支持DSL语法。
 """
 
 import sys
@@ -9,7 +9,7 @@ import os
 from src.infrastructure.container import Container
 from src.infrastructure.logger import get_logger
 from src.utils.exceptions import ScriptError
-from src.application.game_runner import GameRunner
+from src.application.script_compiler import ScriptCompiler
 
 # 创建 DI 容器
 container = Container()
@@ -53,8 +53,8 @@ def main():
     validate_script_file(script_file)
 
     try:
-        game_runner = GameRunner(container)
-        game_runner.run_game(script_file)
+        script_compiler = ScriptCompiler(container)
+        script_compiler.compile_script(script_file)
 
     except FileNotFoundError as e:
         logger.error(f"File not found: {e}")

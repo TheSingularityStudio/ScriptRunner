@@ -1,5 +1,5 @@
 """
-ScriptRunner 运行时组件抽象接口。
+Script Compiler 运行时组件抽象接口。
 定义核心组件的接口以提高抽象层质量。
 """
 
