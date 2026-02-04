@@ -16,9 +16,10 @@ logger = get_logger(__name__)
 class PluginManager:
     """管理 ScriptRunner 应用程序的插件。"""
 
-    def __init__(self, plugin_dir: str = 'plugins'):
+    def __init__(self, plugin_dir: str = 'plugins', container=None):
         self.plugin_dir = Path(plugin_dir)
         self.plugins: Dict[str, PluginInterface] = {}
+        self.container = container
         self._loaded = False
 
     def load_plugins(self):
@@ -118,8 +119,10 @@ class PluginManager:
 
     def _get_plugin_context(self) -> Dict[str, Any]:
         """获取在初始化期间传递给插件的上下文。"""
-        # 插件初始化时不需要上下文，延迟到动作执行时提供
-        return {}
+        if self.container:
+            return {'container': self.container}
+        else:
+            return {}
 
     def shutdown_all(self):
         """关闭所有插件。"""

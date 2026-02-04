@@ -32,8 +32,8 @@ class ExecutionEngine(IExecutionEngine):
         self.script_object = script_object
         if hasattr(self.script_object_executor, 'set_current_script_object'):
             self.script_object_executor.set_current_script_object(self.script_object)
-        if hasattr(self.scene_executor, 'set_script_object'):
-            self.scene_executor.set_script_object(self.script_object)
+        if hasattr(self.script_section_executor, 'set_script_object'):
+            self.script_section_executor.set_script_object(self.script_object)
 
         # 设置插件管理器
         self.plugin_manager = plugin_manager

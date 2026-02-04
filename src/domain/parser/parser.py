@@ -77,12 +77,33 @@ class ScriptParser(IScriptParser):
         if not isinstance(self.script_data, dict):
             raise ValueError("Script must be a dictionary")
 
-        # Check for expected top-level keys for script objects
-        expected_keys = {'variables', 'actions', 'events'}
-        has_expected = any(key in self.script_data for key in expected_keys)
+        # Required keys for all scripts
+        required_keys = {'name', 'actions', 'start_action'}
+        for key in required_keys:
+            if key not in self.script_data:
+                raise ValueError(f"Script must contain '{key}' key")
 
-        if not has_expected:
-            logger.warning("Script does not contain expected keys (variables, actions, events). This may not be a valid script object.")
+        # Validate actions structure
+        actions = self.script_data.get('actions', {})
+        if not isinstance(actions, dict):
+            raise ValueError("Actions must be a dictionary")
+
+        start_action = self.script_data.get('start_action')
+        if start_action not in actions:
+            raise ValueError(f"start_action '{start_action}' not found in actions")
+
+        # Validate each action has commands
+        for action_name, action_data in actions.items():
+            if not isinstance(action_data, dict) or 'commands' not in action_data:
+                raise ValueError(f"Action '{action_name}' must be a dict with 'commands' key")
+            if not isinstance(action_data['commands'], list):
+                raise ValueError(f"Action '{action_name}' commands must be a list")
+
+        # Optional keys validation
+        if 'variables' in self.script_data and not isinstance(self.script_data['variables'], dict):
+            raise ValueError("Variables must be a dictionary")
+
+        logger.info("Script validation passed")
 
     def create_script_object(self, script_data: Dict[str, Any]):
         """从脚本数据创建脚本对象实例。"""

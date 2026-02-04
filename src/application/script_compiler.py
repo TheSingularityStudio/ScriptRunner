@@ -89,27 +89,22 @@ class ScriptCompiler:
     def _initialize_context(self, parser, state_manager):
         """初始化执行上下文。"""
         try:
-            context_data = parser.script_data.get('context', {})
-            if context_data and isinstance(context_data, dict):
-                # 检查是否有attributes子字典，或者直接使用context下的属性
-                attributes = context_data.get('attributes', context_data)
-                if isinstance(attributes, dict):
-                    # 设置context为字典，包含所有属性
-                    state_manager.set_variable('context', attributes)
-                    self.logger.info("Context attributes initialized successfully")
-                else:
-                    self.logger.warning("No valid context attributes found in script data, using defaults")
-                    # 设置默认上下文属性
-                    state_manager.set_variable('context', {'status': 'active', 'name': 'Script'})
-                    self.logger.info("Default context attributes set")
-            else:
-                self.logger.warning("No valid context attributes found in script data, using defaults")
-                # 设置默认上下文属性
-                state_manager.set_variable('context', {'status': 'active', 'name': 'Script'})
-                self.logger.info("Default context attributes set")
-        except KeyError as e:
-            self.logger.error(f"Error initializing context attributes: {e}")
-            raise ScriptError(f"上下文属性初始化失败: {e}")
+            # Initialize variables from script
+            variables = parser.script_data.get('variables', {})
+            if isinstance(variables, dict):
+                for var_name, var_value in variables.items():
+                    state_manager.set_variable(var_name, var_value)
+                self.logger.info(f"Initialized {len(variables)} variables from script")
+
+            # Set context with script metadata
+            context = {
+                'name': parser.script_data.get('name', 'Unnamed Script'),
+                'description': parser.script_data.get('description', ''),
+                'version': parser.script_data.get('version', '1.0.0'),
+                'status': 'active'
+            }
+            state_manager.set_variable('context', context)
+            self.logger.info("Context initialized successfully")
         except Exception as e:
             self.logger.error(f"Unexpected error during context initialization: {e}")
             raise ScriptError(f"上下文初始化意外错误: {e}")
@@ -189,7 +184,40 @@ class ScriptCompiler:
         elif command_type == 'set_variable':
             name = command.get('name')
             value = command.get('value')
+            # 替换变量值中的变量
+            value = self._replace_variables(str(value), state_manager)
             state_manager.set_variable(name, value)
+        elif command_type == 'input':
+            name = command.get('name')
+            message = command.get('message', f'请输入 {name}')
+            # 替换消息中的变量
+            message = self._replace_variables(message, state_manager)
+            # Get input handler from container
+            input_handler = self.container.get('input_handler')
+            if input_handler:
+                user_input = input_handler.get_parameter_input(name, 'str')
+                state_manager.set_variable(name, user_input)
+            else:
+                self.logger.error("Input handler not available")
+        elif command_type == 'if':
+            condition = command.get('condition', '')
+            then_commands = command.get('then', [])
+            else_commands = command.get('else', [])
+
+            # Evaluate condition
+            from src.utils.expression_evaluator import ExpressionEvaluator
+            variables = {}
+            # Get all current variables for condition evaluation
+            for var_name in state_manager.get_all_variables().keys():
+                variables[var_name] = state_manager.get_variable(var_name)
+
+            condition_result = ExpressionEvaluator.evaluate_expression(condition, variables)
+            if condition_result:
+                for cmd in then_commands:
+                    self._execute_command(cmd, renderer, state_manager)
+            else:
+                for cmd in else_commands:
+                    self._execute_command(cmd, renderer, state_manager)
         else:
             self.logger.warning(f"Unknown command type: {command_type}")
 

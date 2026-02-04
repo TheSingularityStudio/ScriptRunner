@@ -4,16 +4,15 @@ ScriptRunner 应用程序初始化器。
 """
 
 from src.infrastructure.container import Container
-from src.infrastructure.logger import Logger
+from src.infrastructure.logger import Logger, setup_logging
 from src.presentation.ui.ui_interface import UIManager
 from src.infrastructure.plugin_manager import PluginManager
 from src.infrastructure.config import Config
 from src.domain.parser.parser import ScriptParser
 from src.domain.runtime.execution_engine import ExecutionEngine
-from src.domain.runtime.scene_executor import SceneExecutor
 from src.domain.runtime.script_object_executor import ScriptObjectExecutor
 from src.domain.runtime.condition_evaluator import ConditionEvaluator
-from src.presentation.input.choice_processor import ChoiceProcessor
+from src.domain.runtime.state_manager import StateManager
 from src.presentation.input.input_handler import InputHandler
 from src.presentation.ui.renderer import ConsoleRenderer
 
@@ -33,7 +32,6 @@ class ApplicationInitializer:
         self._setup_logging()
         self._register_core_services()
         self._register_ui_backends()
-        self._load_plugins()
 
         self._initialized = True
 
@@ -48,13 +46,16 @@ class ApplicationInitializer:
         # 创建并注册配置、UI管理器和插件管理器
         self.config = Config()
         self.ui_manager = UIManager()
-        self.plugin_manager = PluginManager()
+        self.plugin_manager = PluginManager(container=self.container)
         self.container.register('config', self.config)
         self.container.register('ui_manager', self.ui_manager)
         self.container.register('plugin_manager', self.plugin_manager)
 
         # 注册解析器
         self.container.register('parser', ScriptParser())
+
+        # 注册状态管理器
+        self.container.register('state_manager', StateManager())
 
         # 注册核心命令执行器
         self.container.register_factory('core_command_executor', self._create_core_command_executor)
@@ -65,14 +66,11 @@ class ApplicationInitializer:
         # 注册命令执行器
         self.container.register_factory('command_executor', self._create_command_executor)
 
+        # 加载插件以注册场景执行器和选择处理器
+        self._load_plugins()
+
         # 注册动作执行器
         self.container.register_factory('action_executor', self._create_action_executor)
-
-        # 注册场景执行器
-        self.container.register_factory('scene_executor', self._create_scene_executor)
-
-        # 注册选择处理器
-        self.container.register_factory('choice_processor', self._create_choice_processor)
 
         # 注册输入处理器
         self.container.register_factory('input_handler', self._create_input_handler)
@@ -80,14 +78,17 @@ class ApplicationInitializer:
         # 注册互动管理器
         self.container.register_factory('interaction_manager', self._create_interaction_manager)
 
-        # 注册脚本工厂
-        self.container.register_factory('script_factory', self._create_script_factory)
-
         # 注册执行引擎
         self.container.register_factory('execution_engine', self._create_execution_engine)
 
         # 注册渲染器
         self.container.register_factory('renderer', self._create_renderer)
+
+    def _create_core_command_executor(self):
+        """创建核心命令执行器的工厂函数。"""
+        state_manager = self.container.get('state_manager')
+        from src.domain.runtime.core_command_executor import CoreCommandExecutor
+        return CoreCommandExecutor(state_manager)
 
     def _create_condition_evaluator(self):
         """创建条件评估器的工厂函数。"""
@@ -112,21 +113,7 @@ class ApplicationInitializer:
         from src.domain.runtime.script_action_executor import ScriptActionExecutor
         return ScriptActionExecutor(state_manager, command_executor)
 
-    def _create_scene_executor(self):
-        """创建场景执行器的工厂函数。"""
-        parser = self.container.get('parser')
-        state_manager = self.container.get('state_manager')
-        command_executor = self.container.get('command_executor')
-        condition_evaluator = self.container.get('condition_evaluator')
-        return SceneExecutor(parser, state_manager, command_executor, condition_evaluator)
 
-    def _create_choice_processor(self):
-        """创建选择处理器的工厂函数。"""
-        parser = self.container.get('parser')
-        state_manager = self.container.get('state_manager')
-        command_executor = self.container.get('command_executor')
-        condition_evaluator = self.container.get('condition_evaluator')
-        return ChoiceProcessor(parser, state_manager, command_executor, condition_evaluator)
 
     def _create_input_handler(self):
         """创建输入处理器的工厂函数。"""

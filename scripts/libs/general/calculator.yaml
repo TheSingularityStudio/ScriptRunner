@@ -2,59 +2,67 @@ name: "Simple Calculator"
 description: "一个简单的计算器脚本"
 version: "1.0.0"
 
-parameters:
-  - name: num1
-    type: float
-    description: "请输入第一个数字"
-  - name: operation
-    type: str
-    description: "请输入运算符 (+, -, *, /)"
-  - name: num2
-    type: float
-    description: "请输入第二个数字"
+variables:
+  num1: 0
+  operation: "+"
+  num2: 0
+  result: 0
 
-script:
-  - if:
-      condition: "operation == '+'"
-      then:
-        - set:
-            variable: result
+actions:
+  main:
+    commands:
+      - type: input
+        name: num1
+        message: "请输入第一个数字"
+      - type: input
+        name: operation
+        message: "请输入运算符 (+, -, *, /)"
+      - type: input
+        name: num2
+        message: "请输入第二个数字"
+      - type: if
+        condition: "operation == '+'"
+        then:
+          - type: set_variable
+            name: result
             value: "{num1} + {num2}"
-        - print:
+          - type: print
             message: "{num1} + {num2} = {result}"
-      else:
-        - if:
+        else:
+          - type: if
             condition: "operation == '-'"
             then:
-              - set:
-                  variable: result
-                  value: "{num1} - {num2}"
-              - print:
-                  message: "{num1} - {num2} = {result}"
+              - type: set_variable
+                name: result
+                value: "{num1} - {num2}"
+              - type: print
+                message: "{num1} - {num2} = {result}"
             else:
-              - if:
-                  condition: "operation == '*'"
-                  then:
-                    - set:
-                        variable: result
-                        value: "{num1} * {num2}"
-                    - print:
-                        message: "{num1} * {num2} = {result}"
-                  else:
-                    - if:
-                        condition: "operation == '/'"
+              - type: if
+                condition: "operation == '*'"
+                then:
+                  - type: set_variable
+                    name: result
+                    value: "{num1} * {num2}"
+                  - type: print
+                    message: "{num1} * {num2} = {result}"
+                else:
+                  - type: if
+                    condition: "operation == '/'"
+                    then:
+                      - type: if
+                        condition: "num2 != 0"
                         then:
-                          - if:
-                              condition: "num2 != 0"
-                              then:
-                                - set:
-                                    variable: result
-                                    value: "{num1} / {num2}"
-                                - print:
-                                    message: "{num1} / {num2} = {result}"
-                              else:
-                                - print:
-                                    message: "错误：除数不能为零！"
+                          - type: set_variable
+                            name: result
+                            value: "{num1} / {num2}"
+                          - type: print
+                            message: "{num1} / {num2} = {result}"
                         else:
-                          - print:
-                              message: "错误：不支持的运算符 '{operation}'"
+                          - type: print
+                            message: "错误：除数不能为零！"
+                    else:
+                      - type: print
+                        message: "错误：不支持的运算符 '{operation}'"
+
+start_action: main

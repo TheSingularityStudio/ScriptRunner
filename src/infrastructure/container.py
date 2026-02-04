@@ -4,26 +4,33 @@ ScriptRunner 的依赖注入容器。提供真正的依赖注入支持。
 
 from typing import Dict, Any, Callable, Type, Optional, Union
 import inspect
+import threading
 from .logger import get_logger
 
 logger = get_logger(__name__)
 
 
 class Container:
-    """真正的依赖注入容器，支持构造函数注入。"""
+    """依赖注入容器，支持构造函数注入。"""
 
     def __init__(self):
         self._services: Dict[str, Any] = {}
         self._factories: Dict[str, Callable] = {}
         self._types: Dict[str, Type] = {}
+        self._transient_factories: Dict[str, Callable] = {}  # 新增：瞬态工厂
+        self._resolving: set = set()  # 新增：用于检测循环依赖
+        self._lock = threading.RLock()  # 新增：线程安全锁
 
     def register(self, service_name: str, service: Any):
         """注册一个单例服务实例。"""
         self._services[service_name] = service
 
-    def register_factory(self, service_name: str, factory: Callable):
-        """注册一个工厂函数用于创建服务。"""
-        self._factories[service_name] = factory
+    def register_factory(self, service_name: str, factory: Callable, transient: bool = False):
+        """注册一个工厂函数用于创建服务。transient=True 表示每次都创建新实例。"""
+        if transient:
+            self._transient_factories[service_name] = factory
+        else:
+            self._factories[service_name] = factory
 
     def register_type(self, service_name: str, cls: Type):
         """注册一个类型，支持自动依赖解析。"""
@@ -74,15 +81,13 @@ class Container:
             if param_name == 'self':
                 continue
 
-            # 检查是否有默认值
-            if param.default != inspect.Parameter.empty:
-                continue
-
-            # 尝试从容器中解析依赖
-            if param_name in self._services or param_name in self._factories or param_name in self._types:
+            # 如果参数在容器中注册，则注入依赖，否则使用默认值或跳过
+            if param_name in self._services or param_name in self._factories or param_name in self._types or param_name in self._transient_factories:
                 kwargs[param_name] = self.get(param_name)
-            else:
+            elif param.default == inspect.Parameter.empty:
+                # 必需参数且未注册，抛出错误
                 raise ValueError(f"Cannot resolve dependency '{param_name}' for {cls.__name__}")
+            # 如果有默认值且未注册，则不注入（使用默认值）
 
         return cls(**kwargs)
 
@@ -90,13 +95,16 @@ class Container:
         """检查服务是否已注册。"""
         return (service_name in self._services or
                 service_name in self._factories or
-                service_name in self._types)
+                service_name in self._types or
+                service_name in self._transient_factories)
 
     def clear(self):
         """清除所有已注册的服务（对测试有用）。"""
         self._services.clear()
         self._factories.clear()
         self._types.clear()
+        self._transient_factories.clear()
+        self._resolving.clear()
 
 
 # 移除全局容器实例，由调用方创建和管理
