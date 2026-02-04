@@ -7,12 +7,17 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 
 
-class ISceneExecutor(ABC):
-    """场景执行器接口。"""
+class IScriptSectionExecutor(ABC):
+    """脚本段执行器接口。"""
+
+    @abstractmethod
+    def execute_script_section(self, section_id: str) -> Dict[str, Any]:
+        """执行脚本段并返回结果。"""
+        pass
 
     @abstractmethod
     def execute_scene(self, scene_id: str) -> Dict[str, Any]:
-        """执行场景并返回结果。"""
+        """执行场景（向后兼容）。"""
         pass
 
 
@@ -53,6 +58,15 @@ class IChoiceProcessor(ABC):
         pass
 
 
+class IOptionProcessor(ABC):
+    """选项处理器接口。"""
+
+    @abstractmethod
+    def process_option(self, option_index: int) -> tuple[Optional[str], List[str]]:
+        """处理选项并返回下一个脚本段和消息列表。"""
+        pass
+
+
 class IInputHandler(ABC):
     """输入处理器接口。"""
 
@@ -66,18 +80,18 @@ class IExecutionEngine(ABC):
     """执行引擎接口。"""
 
     @abstractmethod
-    def execute_scene(self, scene_id: str) -> Dict[str, Any]:
-        """执行场景。"""
+    def execute_script_section(self, section_id: str) -> Dict[str, Any]:
+        """执行脚本段。"""
         pass
 
     @abstractmethod
-    def process_choice(self, choice_index: int) -> tuple[Optional[str], List[str]]:
-        """处理选择。"""
+    def process_option(self, option_index: int) -> tuple[Optional[str], List[str]]:
+        """处理选项。"""
         pass
 
     @abstractmethod
-    def process_player_input(self, input_text: str) -> Dict[str, Any]:
-        """处理玩家输入。"""
+    def process_user_input(self, input_text: str) -> Dict[str, Any]:
+        """处理用户输入。"""
         pass
 
 

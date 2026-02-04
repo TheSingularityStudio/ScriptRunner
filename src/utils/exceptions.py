@@ -1,10 +1,10 @@
 """
-ScriptRunner 游戏引擎的自定义异常。
+ScriptRunner 脚本执行器的自定义异常。
 """
 
 
-class GameError(Exception):
-    """游戏相关错误的基础异常。"""
+class ScriptExecutionError(Exception):
+    """脚本执行相关错误的基础异常。"""
     pass
 
 

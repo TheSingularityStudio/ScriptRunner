@@ -70,16 +70,16 @@ class UIManager:
         """Get the current UI backend."""
         return self._current_backend
 
-    def render_scene(self, scene_data: Dict[str, Any]):
-        """Render scene using current backend."""
+    def show_message(self, message: str):
+        """Show message using current backend."""
         if self._current_backend:
-            self._current_backend.render_scene(scene_data)
+            self._current_backend.show_message(message)
 
-    def get_player_choice(self) -> int:
-        """Get player choice using current backend."""
+    def get_input(self, prompt: str = "") -> str:
+        """Get input using current backend."""
         if self._current_backend:
-            return self._current_backend.get_player_choice()
-        return -1
+            return self._current_backend.get_input(prompt)
+        return ""
 
     def show_message(self, message: str):
         """Show message using current backend."""

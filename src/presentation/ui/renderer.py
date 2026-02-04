@@ -94,7 +94,7 @@ class ConsoleRenderer(UIBackend):
                 print("请输入有效的数字或命令。")
             except KeyboardInterrupt:
                 logger.info("Input interrupted by user")
-                raise  # Re-raise to be caught in game loop
+                raise  # Re-raise to be caught in execution loop
             except Exception as e:
                 logger.error(f"Unexpected error during input: {e}")
                 print(f"输入时发生意外错误: {e}")

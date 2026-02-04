@@ -68,8 +68,8 @@ class Config:
                 'level': 'INFO',
                 'file': 'logs/%Y-%m-%d.log'
             },
-            'game': {
-                'save_file': 'game_save.json',
+            'execution': {
+                'save_file': 'execution_save.json',
                 'auto_save': True
             },
             'ui': {

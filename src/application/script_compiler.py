@@ -7,7 +7,7 @@ import os
 import yaml
 from src.infrastructure.container import Container
 from src.infrastructure.logger import get_logger
-from src.utils.exceptions import GameError, ScriptError, ConfigurationError
+from src.utils.exceptions import ScriptExecutionError, ScriptError, ConfigurationError
 
 
 class ScriptCompiler:
@@ -37,13 +37,13 @@ class ScriptCompiler:
         # 初始化执行上下文
         self._initialize_context(parser, state_manager)
 
-        # 获取起始场景
-        current_scene_id = parser.get_start_scene()
-        self.logger.info(f"Script starting from scene: {current_scene_id}")
-        print(f"脚本从场景开始: {current_scene_id}")
+        # 获取起始动作
+        start_action = parser.script_data.get('start_action', 'main')
+        self.logger.info(f"Script starting from action: {start_action}")
+        print(f"脚本从动作开始: {start_action}")
 
         # 运行执行循环
-        self._run_execution_loop(execution_engine, renderer, state_manager, current_scene_id)
+        self._run_execution_loop(execution_engine, renderer, state_manager, start_action)
 
     def _initialize_application(self):
         """初始化应用程序并返回必要的组件。"""
@@ -114,93 +114,89 @@ class ScriptCompiler:
             self.logger.error(f"Unexpected error during context initialization: {e}")
             raise ScriptError(f"上下文初始化意外错误: {e}")
 
-    def _run_execution_loop(self, execution_engine, renderer, state_manager, current_scene_id: str):
-        """运行主执行循环，使用脚本对象执行。"""
-        invalid_choice_count = 0
-        max_invalid_choices = 5  # 限制无效选择次数
+    def _run_execution_loop(self, execution_engine, renderer, state_manager, start_action: str):
+        """运行主执行循环，执行脚本动作。"""
         consecutive_error_count = 0
         max_consecutive_errors = 3  # 限制连续错误次数
-        rerender = True
 
-        # 获取脚本工厂
-        script_factory = self.container.get('script_factory')
+        try:
+            # 检查是否需要使用游戏插件进行交互式执行
+            plugin_manager = self.container.get('plugin_manager')
+            game_plugin = plugin_manager.get_plugin('game_runner') if plugin_manager else None
 
-        while current_scene_id:
+            if game_plugin and self._should_use_game_plugin():
+                # 使用游戏插件进行交互式执行
+                self._run_game_execution_loop(execution_engine, renderer, state_manager, start_action, game_plugin)
+            else:
+                # 使用标准动作执行
+                self._execute_action(start_action, execution_engine, renderer, state_manager)
+                self.logger.info(f"Executed action: {start_action}")
+
+        except KeyboardInterrupt:
+            self.logger.info("Execution interrupted by user")
+            print("\n\n执行已中断。")
+            # 尝试保存执行状态
             try:
-                if rerender:
-                    # 执行场景
-                    scene_data = execution_engine.execute_scene(current_scene_id)
-                    renderer.render_scene(scene_data)
-
-                rerender = True  # 默认重新渲染
-
-                # 获取用户选择
-                choice_index = renderer.get_player_choice()
-
-                if choice_index == -1:
-                    # 未做选择，继续当前场景，不重新渲染
-                    rerender = False
-                    continue
-
-                # 处理选择
-                next_scene, messages = execution_engine.process_choice(choice_index)
-
-                # 获取广播消息
-                broadcast_messages = state_manager.get_broadcast_messages()
-
-                # 合并所有消息
-                all_messages = messages + broadcast_messages
-
-                # 显示所有消息
-                if all_messages:
-                    renderer.show_message('\n'.join(all_messages))
-
-                if next_scene:
-                    current_scene_id = next_scene
-                    invalid_choice_count = 0  # 重置计数器
-                    consecutive_error_count = 0  # 重置错误计数器
-                elif not messages:
-                    # 只有在没有消息（表示无效选择）时才递增计数器
-                    invalid_choice_count += 1
-                    if invalid_choice_count >= max_invalid_choices:
-                        self.logger.warning(f"Too many invalid choices ({invalid_choice_count}), ending execution")
-                        print(f"\n无效选择次数过多 ({invalid_choice_count})，执行结束。")
-                        break
-                    print(f"\n无效的选择，请重试。 (剩余尝试次数: {max_invalid_choices - invalid_choice_count})")
-                    continue
-                # 如果有消息但没有场景变化，认为是有效选择但不推进场景，不递增计数器
-
-                consecutive_error_count = 0  # 重置错误计数器，如果没有异常
-
-            except KeyboardInterrupt:
-                self.logger.info("Execution interrupted by user during loop")
-                print("\n\n执行已中断。")
-                # 尝试保存执行状态
-                try:
-                    if self.container.has('state_manager'):
-                        state_manager = self.container.get('state_manager')
-                        state_manager.save_game()
-                        self.logger.info("Execution state saved successfully")
-                        print("执行状态已保存。")
-                    else:
-                        self.logger.warning("State manager not available, cannot save execution state")
-                        print("状态管理器不可用，无法保存执行状态。")
-                except Exception as save_error:
-                    self.logger.error(f"Failed to save execution state: {save_error}")
-                    print(f"保存执行状态失败: {save_error}")
-                break
-            except Exception as e:
-                consecutive_error_count += 1
-                self.logger.error(f"Unexpected error in execution loop (attempt {consecutive_error_count}/{max_consecutive_errors}): {e}")
-                print(f"\n执行中发生意外错误 (第{consecutive_error_count}次): {e}")
-
-                if consecutive_error_count >= max_consecutive_errors:
-                    self.logger.error(f"Too many consecutive errors ({consecutive_error_count}), terminating program")
-                    print(f"\n连续错误次数过多 ({consecutive_error_count})，程序终止。")
-                    raise SystemExit(1)  # 强制退出程序
+                if self.container.has('state_manager'):
+                    state_manager = self.container.get('state_manager')
+                    state_manager.save_execution_state()
+                    self.logger.info("Execution state saved successfully")
+                    print("执行状态已保存。")
                 else:
-                    print("尝试继续执行...")
-                    # 继续循环，但记录错误
+                    self.logger.warning("State manager not available, cannot save execution state")
+                    print("状态管理器不可用，无法保存执行状态。")
+            except Exception as save_error:
+                self.logger.error(f"Failed to save execution state: {save_error}")
+                print(f"保存执行状态失败: {save_error}")
+        except Exception as e:
+            consecutive_error_count += 1
+            self.logger.error(f"Unexpected error in execution (attempt {consecutive_error_count}/{max_consecutive_errors}): {e}")
+            print(f"\n执行中发生意外错误 (第{consecutive_error_count}次): {e}")
+
+            if consecutive_error_count >= max_consecutive_errors:
+                self.logger.error(f"Too many consecutive errors ({consecutive_error_count}), terminating program")
+                print(f"\n连续错误次数过多 ({consecutive_error_count})，程序终止。")
+                raise SystemExit(1)  # 强制退出程序
+            else:
+                print("尝试继续执行...")
+                # 继续循环，但记录错误
 
         print("\n执行完成！")
         self.logger.info("Execution ended normally")
+
+    def _execute_action(self, action_name: str, execution_engine, renderer, state_manager):
+        """执行一个脚本动作。"""
+        script_data = self.container.get('parser').script_data
+        actions = script_data.get('actions', {})
+
+        if action_name not in actions:
+            raise ScriptError(f"Action '{action_name}' not found in script")
+
+        action = actions[action_name]
+        commands = action.get('commands', [])
+
+        for command in commands:
+            self._execute_command(command, renderer, state_manager)
+
+    def _execute_command(self, command: dict, renderer, state_manager):
+        """执行单个命令。"""
+        command_type = command.get('type')
+        if command_type == 'print':
+            message = command.get('message', '')
+            # 替换变量
+            message = self._replace_variables(message, state_manager)
+            renderer.show_message(message)
+        elif command_type == 'set_variable':
+            name = command.get('name')
+            value = command.get('value')
+            state_manager.set_variable(name, value)
+        else:
+            self.logger.warning(f"Unknown command type: {command_type}")
+
+    def _replace_variables(self, text: str, state_manager) -> str:
+        """替换文本中的变量占位符。"""
+        import re
+        def replace_match(match):
+            var_name = match.group(1)
+            return str(state_manager.get_variable(var_name, ''))
+        return re.sub(r'\{(\w+)\}', replace_match, text)

@@ -1,0 +1,24 @@
+# 示例通用脚本：简单的计算和输出脚本
+name: "示例计算脚本"
+description: "演示ScriptRunner执行基本计算和输出操作"
+
+variables:
+  result: 0
+
+actions:
+  - name: calculate
+    commands:
+      - type: set_variable
+        name: result
+        value: 42
+      - type: print
+        message: "计算结果: {result}"
+
+  - name: display_info
+    commands:
+      - type: print
+        message: "脚本名称: {name}"
+      - type: print
+        message: "描述: {description}"
+
+start_action: calculate
