@@ -4,7 +4,7 @@ ScriptRunner 解析器抽象接口。
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 
 class IScriptParser(ABC):
@@ -16,16 +16,6 @@ class IScriptParser(ABC):
         pass
 
     @abstractmethod
-    def get_scene(self, scene_id: str) -> Dict[str, Any]:
-        """获取场景。"""
-        pass
-
-    @abstractmethod
-    def get_start_scene(self) -> str:
-        """获取起始场景。"""
-        pass
-
-    @abstractmethod
-    def parse_player_command(self, input_text: str) -> Dict[str, Any]:
-        """解析玩家命令。"""
+    def create_script_object(self, script_data: Dict[str, Any]):
+        """从脚本数据创建脚本对象实例。"""
         pass

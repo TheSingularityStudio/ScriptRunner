@@ -35,31 +35,11 @@ class TestExecutionEngine:
         assert engine.parser == self.mock_parser
         assert engine.state == self.mock_state_manager
         assert engine.scene_executor == self.mock_scene_executor
-        assert engine.command_executor == self.mock_command_executor
+        assert engine.script_object_executor == self.mock_command_executor
         assert engine.condition_evaluator == self.mock_condition_evaluator
         assert engine.choice_processor == self.mock_choice_processor
-        assert engine.script_factory is None
 
-    def test_initialization_with_script_factory(self):
-        """测试 ExecutionEngine 初始化（有脚本工厂）。"""
-        self.mock_parser.script_data = {'variables': {'health': 100}}
-        mock_script = ScriptObject()
-        self.mock_script_factory.create_script_from_yaml.return_value = mock_script
 
-        engine = ExecutionEngine(
-            self.mock_parser,
-            self.mock_state_manager,
-            self.mock_scene_executor,
-            self.mock_command_executor,
-            self.mock_condition_evaluator,
-            self.mock_choice_processor,
-            self.mock_input_handler,
-            script_factory=self.mock_script_factory
-        )
-
-        assert engine.script_factory == self.mock_script_factory
-        self.mock_script_factory.create_script_from_yaml.assert_called_once_with({'variables': {'health': 100}})
-        self.mock_command_executor.set_current_script_object.assert_called_once_with(mock_script)
 
     def test_execute_scene(self):
         """测试场景执行。"""

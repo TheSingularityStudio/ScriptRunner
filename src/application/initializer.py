@@ -4,12 +4,11 @@ ScriptRunner 应用程序初始化器。
 """
 
 from src.infrastructure.container import Container
-from src.infrastructure.logger import setup_logging
+from src.infrastructure.logger import Logger
 from src.presentation.ui.ui_interface import UIManager
 from src.infrastructure.plugin_manager import PluginManager
 from src.infrastructure.config import Config
 from src.domain.parser.parser import ScriptParser
-from src.infrastructure.state_manager import StateManager
 from src.domain.runtime.execution_engine import ExecutionEngine
 from src.domain.runtime.scene_executor import SceneExecutor
 from src.domain.runtime.script_object_executor import ScriptObjectExecutor
@@ -56,9 +55,6 @@ class ApplicationInitializer:
 
         # 注册解析器
         self.container.register('parser', ScriptParser())
-
-        # 注册状态管理器
-        self.container.register('state_manager', StateManager())
 
         # 注册核心命令执行器
         self.container.register_factory('core_command_executor', self._create_core_command_executor)

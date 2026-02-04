@@ -15,11 +15,13 @@ class TestScriptObjectExecutor:
         self.mock_state_manager = Mock()
         self.mock_condition_evaluator = Mock()
         self.mock_script_factory = Mock()
+        self.mock_core_command_executor = Mock()
         self.executor = ScriptObjectExecutor(
             self.mock_parser,
             self.mock_state_manager,
             self.mock_condition_evaluator,
-            self.mock_script_factory
+            self.mock_script_factory,
+            self.mock_core_command_executor
         )
 
     def test_initialization(self):
@@ -48,24 +50,22 @@ class TestScriptObjectExecutor:
         ]
         messages = self.executor.execute_commands(commands)
         assert messages == []
-        self.mock_state_manager.set_variable.assert_any_call('health', 100)
-        self.mock_state_manager.set_variable.assert_any_call('strength', 50)
+        self.mock_core_command_executor.execute_command.assert_any_call({'set': 'health = 100'})
+        self.mock_core_command_executor.execute_command.assert_any_call({'set': 'strength = 50'})
 
     def test_execute_command_set(self):
         """测试 set 命令。"""
         command = {'set': 'health = 100'}
         messages = self.executor.execute_command(command)
         assert messages == []
-        self.mock_state_manager.set_variable.assert_called_with('health', 100)
+        self.mock_core_command_executor.execute_command.assert_called_with({'set': 'health = 100'})
 
     def test_execute_command_set_with_addition(self):
         """测试 set 命令带加法。"""
-        self.mock_state_manager.get_variable.return_value = 50
         command = {'set': 'health += 25'}
         messages = self.executor.execute_command(command)
         assert messages == []
-        self.mock_state_manager.get_variable.assert_called_with('health', 0)
-        self.mock_state_manager.set_variable.assert_called_with('health', 75)
+        self.mock_core_command_executor.execute_command.assert_called_with({'set': 'health += 25'})
 
     def test_execute_command_action_without_script_object(self):
         """测试 action 命令无脚本对象。"""
@@ -83,7 +83,7 @@ class TestScriptObjectExecutor:
         messages = self.executor.execute_command(command)
         assert messages == []
         mock_script.execute_action.assert_called_with('attack', value='10')
-        self.mock_state_manager.set_variable.assert_called_with('damage', 10)
+        self.mock_core_command_executor.execute_command.assert_called_with({'set': 'damage=10'})
 
     def test_execute_command_event_without_script_object(self):
         """测试 event 命令无脚本对象。"""
@@ -101,7 +101,7 @@ class TestScriptObjectExecutor:
         messages = self.executor.execute_command(command)
         assert messages == []
         mock_script.trigger_event.assert_called_with('on_enter')
-        self.mock_state_manager.set_variable.assert_called_with('entered', True)
+        self.mock_core_command_executor.execute_command.assert_called_with({'set': 'entered=true'})
 
     def test_execute_command_unknown(self):
         """测试未知命令。"""
